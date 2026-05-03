@@ -22,7 +22,7 @@ def webhook():
 
     try:
         ydl_opts = {
-            'format': 'best[filesize<50M]',
+            'format': 'best',
             'outtmpl': 'video.%(ext)s',
             'cookiefile': 'cookies.txt'
         }
