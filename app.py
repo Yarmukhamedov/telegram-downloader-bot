@@ -30,8 +30,11 @@ def webhook():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(text, download=True)
             file_path = ydl.prepare_filename(info)
-
-        send_video(chat_id, file_path)
+        
+        try:
+            send_video(chat_id, file_path)
+        except:
+            send_document(chat_id, file_path)
         os.remove(file_path)
 
     except Exception as e:
