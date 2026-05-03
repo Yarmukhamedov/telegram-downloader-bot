@@ -15,7 +15,7 @@ def webhook():
     chat_id = message.get("chat", {}).get("id")
     text = message.get("text")
 
-    if not text:
+    if not text or not text.startswith("http"):
         return "ok"
 
     send_message(chat_id, "⏳ Скачиваю...")
