@@ -54,6 +54,12 @@ def send_video(chat_id, file_path):
             data={"chat_id": chat_id},
             files={"video": f}
         )
-
+def send_document(chat_id, file_path):
+    with open(file_path, "rb") as f:
+        requests.post(f"{API_URL}/sendDocument",
+            data={"chat_id": chat_id},
+            files={"document": f}
+        )
+        
 port = int(os.environ.get("PORT", 5000))
 app.run(host="0.0.0.0", port=port)
