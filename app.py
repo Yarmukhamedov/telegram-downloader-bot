@@ -24,6 +24,7 @@ def webhook():
         ydl_opts = {
             'format': 'best[filesize<50M]',
             'outtmpl': 'video.%(ext)s'
+            'cookiefile': 'cookies.txt'
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
