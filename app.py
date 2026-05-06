@@ -52,7 +52,7 @@ def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
     ydl_opts = {
-        'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+        'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
@@ -64,6 +64,10 @@ def download_video(url, message: types.Message, loop):
                 'player_client': ['ios', 'web'],
             }
         },
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': 'mp4',
+        }],
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
@@ -71,7 +75,12 @@ def download_video(url, message: types.Message, loop):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info)
+        filename = ydl.prepare_filename(info)
+        # After merge/conversion the file is .mp4, but prepare_filename may return original ext
+        mp4_path = os.path.splitext(filename)[0] + '.mp4'
+        if os.path.exists(mp4_path):
+            return mp4_path
+        return filename
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
