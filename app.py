@@ -26,6 +26,7 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# Путь к куки
 COOKIES_PATH = "cookies.txt"
 
 class MyLogger:
@@ -56,27 +57,40 @@ def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
     ydl_opts = {
+        # Формат как в Shortcut (1080p mp4 preference)
         'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
         'merge_output_format': 'mp4',
         'noplaylist': True,
-        # Включаем загрузку удаленных компонентов для решения подписей
         'enable_remote_components': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['mweb', 'web', 'tv'],
+                # Используем android и ios — они меньше всего подвержены 429 ошибке
+                'player_client': ['android', 'ios', 'mweb'],
+                'skip': ['web', 'web_embedded'] # Пропускаем веб-клиенты, они заблокированы на Railway
             }
         },
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4',
         }],
+        # Добавляем заголовки, чтобы имитировать браузер
+        'http_headers': {
+            'User-Agent': 'com.google.android.youtube/19.16.36 (Linux; U; Android 14; en_US; Pixel 8 Pro) gzip',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Sec-Fetch-Mode': 'navigate',
+        }
     }
 
+    # ПРОВЕРКА КУКИ: Это критически важно для обхода 429 ошибки на Railway
     if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+        logger.info(f"Using cookies from {COOKIES_PATH}")
         ydl_opts['cookiefile'] = COOKIES_PATH
+    else:
+        logger.warning("COOKIES_PATH not found or empty! This will likely lead to 429 error on Railway.")
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -86,12 +100,12 @@ def download_video(url, message: types.Message, loop):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("👋 Привет! Пришли ссылку на YouTube, и я скачаю её (1080p, PO Token).")
+    await message.answer("👋 Привет! Пришли ссылку на YouTube. (Использую Android/iOS клиенты для обхода блокировок)")
 
 @dp.message(F.text.regexp(r'^(https?://)'))
 async def handle_link(message: types.Message):
     url = message.text
-    status_msg = await message.answer("⏳ Анализирую...")
+    status_msg = await message.answer("⏳ Анализирую (имитация Android)...")
     
     loop = asyncio.get_event_loop()
     
@@ -109,13 +123,16 @@ async def handle_link(message: types.Message):
             os.remove(file_path)
             
     except Exception as e:
-        logger.error(f"Error: {e}")
-        await status_msg.edit_text(f"❌ Ошибка: {str(e)}")
+        logger.error(f"Download error: {e}")
+        # Если это 429, даем совет пользователю
+        error_text = str(e)
+        if "429" in error_text:
+            error_text = "❌ Ошибка 429 (Too Many Requests). YouTube заблокировал IP сервера. Нужно обновить cookies.txt."
+        await status_msg.edit_text(error_text)
 
 async def main():
     logger.info("Bot is starting...")
     await asyncio.sleep(5)
-    
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
