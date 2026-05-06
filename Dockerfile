@@ -1,10 +1,11 @@
 # Используем официальный образ Python
 FROM python:3.11-slim
 
-# Устанавливаем системные зависимости (FFmpeg и Node.js)
+# Устанавливаем системные зависимости (FFmpeg, Node.js, git)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     curl \
+    git \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
@@ -17,11 +18,20 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Скачиваем EJS challenge solver скрипты для yt-dlp
-RUN yt-dlp --remote-components ejs:github --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ" || true
+# Устанавливаем PO Token плагин для yt-dlp
+RUN pip install --no-cache-dir bgutil-ytdlp-pot-provider
+
+# Клонируем и собираем bgutil PO Token provider server
+RUN git clone --single-branch --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil-ytdlp-pot-provider \
+    && cd /opt/bgutil-ytdlp-pot-provider/server \
+    && npm ci \
+    && npx tsc
 
 # Копируем остальные файлы проекта
 COPY . .
 
-# Команда для запуска
-CMD ["python", "app.py"]
+# Скрипт запуска: сначала PO Token сервер, потом бот
+COPY start.sh .
+RUN chmod +x start.sh
+
+CMD ["./start.sh"]

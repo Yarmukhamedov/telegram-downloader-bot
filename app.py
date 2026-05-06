@@ -21,12 +21,13 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Путь к куки
+# Путь к куки (опционально)
 COOKIES_PATH = "cookies.txt"
 
 class MyLogger:
     def debug(self, msg):
-        pass
+        if msg.startswith('[debug]'):
+            logger.debug(msg)
     def warning(self, msg):
         logger.warning(msg)
     def error(self, msg):
@@ -56,14 +57,11 @@ def download_video(url, message: types.Message, loop):
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
-        'cookiefile': COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
         'merge_output_format': 'mp4',
         'noplaylist': True,
-        # Включаем загрузку EJS скриптов для решения YouTube challenge
-        'enable_remote_components': 'ejs:github',
+        # Используем mweb клиент — PO Token будет предоставлен bgutil плагином автоматически
         'extractor_args': {
             'youtube': {
-                # mweb и web работают с cookies, ios — нет
                 'player_client': ['mweb', 'web'],
             }
         },
@@ -75,6 +73,10 @@ def download_video(url, message: types.Message, loop):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
     }
+
+    # Добавляем cookies только если файл существует и не пустой
+    if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+        ydl_opts['cookiefile'] = COOKIES_PATH
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -132,6 +134,14 @@ async def main():
         logger.info(f"Node.js found: {node_version}")
     except Exception as e:
         logger.warning(f"Node.js NOT found: {e}")
+
+    # Проверка наличия PO Token provider
+    try:
+        import urllib.request
+        response = urllib.request.urlopen("http://127.0.0.1:4416/")
+        logger.info("PO Token provider is running")
+    except Exception as e:
+        logger.warning(f"PO Token provider check: {e}")
 
     # Удаляем вебхук, если он был установлен ранее (решает ошибку Conflict)
     await bot.delete_webhook(drop_pending_updates=True)
