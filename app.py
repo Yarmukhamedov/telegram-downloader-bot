@@ -30,8 +30,7 @@ COOKIES_PATH = "cookies.txt"
 
 class MyLogger:
     def debug(self, msg):
-        # Логируем только важные отладочные сообщения от плагинов и экстрактора
-        if any(x in msg for x in ["[pot]", "Signature", "n-parameter", "EJS"]):
+        if any(x in msg for x in ["[pot]", "Signature", "n-parameter", "EJS", "ejs"]):
             logger.info(f"DEBUG: {msg}")
     def warning(self, msg):
         logger.warning(msg)
@@ -57,19 +56,17 @@ def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
     ydl_opts = {
-        # Формат как в Shortcut (1080p mp4 preference)
         'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
         'merge_output_format': 'mp4',
         'noplaylist': True,
-        # Явно указываем рантайм для решения JS-челленджей
-        'js_runtimes': ['node'],
+        # Включаем загрузку удаленных компонентов для решения подписей
+        'enable_remote_components': True,
         'extractor_args': {
             'youtube': {
                 'player_client': ['mweb', 'web', 'tv'],
-                # po_token НЕ указываем здесь вручную, его подставит плагин bgutil
             }
         },
         'postprocessors': [{
@@ -89,7 +86,7 @@ def download_video(url, message: types.Message, loop):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("👋 Привет! Пришли ссылку на YouTube, и я скачаю её в 1080p (через PO Token Provider).")
+    await message.answer("👋 Привет! Пришли ссылку на YouTube, и я скачаю её (1080p, PO Token).")
 
 @dp.message(F.text.regexp(r'^(https?://)'))
 async def handle_link(message: types.Message):
@@ -112,16 +109,13 @@ async def handle_link(message: types.Message):
             os.remove(file_path)
             
     except Exception as e:
-        logger.error(f"Error during download: {e}")
+        logger.error(f"Error: {e}")
         await status_msg.edit_text(f"❌ Ошибка: {str(e)}")
 
 async def main():
     logger.info("Bot is starting...")
-    
-    # Просто убеждаемся, что мы подождали старта сервера в start.sh
     await asyncio.sleep(5)
-    logger.info("Ready to handle updates.")
-
+    
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
