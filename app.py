@@ -3,10 +3,7 @@ import asyncio
 import logging
 import yt_dlp
 import sys
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command
-from aiogram.types import FSInputFile
-from dotenv import load_dotenv
+import subprocess
 
 # Настройка логирования
 logging.basicConfig(
@@ -29,7 +26,6 @@ COOKIES_PATH = "cookies.txt"
 
 class MyLogger:
     def debug(self, msg):
-        # Логируем важные детали подписи и токенов
         if any(x in msg for x in ["[pot]", "Signature", "n-parameter", "EJS", "ejs"]):
             logger.info(f"DEBUG: {msg}")
     def warning(self, msg):
@@ -55,6 +51,12 @@ async def progress_hook(d, message: types.Message, last_update_time):
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
+    # "Прогрев" - принудительно заставляем yt-dlp обновить компоненты через CLI
+    try:
+        subprocess.run(["yt-dlp", "--remote-components", "ejs:github", "--version"], capture_output=True)
+    except:
+        pass
+
     ydl_opts = {
         'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
@@ -62,13 +64,11 @@ def download_video(url, message: types.Message, loop):
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
         'merge_output_format': 'mp4',
         'noplaylist': True,
-        'enable_remote_components': True,
-        # ПРАВИЛЬНЫЙ ФОРМАТ js_runtimes
+        'enable_remote_components': 'ejs:github',
         'js_runtimes': {'node': {}},
         'extractor_args': {
             'youtube': {
-                # Используем клиентов, которые поддерживают куки
-                'player_client': ['mweb', 'web'],
+                'player_client': ['web', 'mweb', 'tv'],
             }
         },
         'postprocessors': [{
@@ -88,12 +88,12 @@ def download_video(url, message: types.Message, loop):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("👋 Привет! Пришли ссылку. (Куки + PO Token + Signature Solver активны)")
+    await message.answer("👋 Привет! Пришли ссылку на YouTube. Теперь всё должно работать!")
 
 @dp.message(F.text.regexp(r'^(https?://)'))
 async def handle_link(message: types.Message):
     url = message.text
-    status_msg = await message.answer("⏳ Анализирую (Web + Cookies)...")
+    status_msg = await message.answer("⏳ Анализирую (EJS+POT)...")
     
     loop = asyncio.get_event_loop()
     
@@ -111,7 +111,7 @@ async def handle_link(message: types.Message):
             os.remove(file_path)
             
     except Exception as e:
-        logger.error(f"Download error: {e}")
+        logger.error(f"Error: {e}")
         await status_msg.edit_text(f"❌ Ошибка: {str(e)}")
 
 async def main():

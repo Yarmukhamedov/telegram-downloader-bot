@@ -22,11 +22,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir bgutil-ytdlp-pot-provider
 
 # Клонируем и собираем bgutil PO Token provider server
-# Используем конкретный коммит для стабильности
 RUN git clone https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil-ytdlp-pot-provider \
     && cd /opt/bgutil-ytdlp-pot-provider/server \
     && npm install \
     && npx tsc
+
+# ПРЕДУСТАНОВКА EJS компонентов (Signature Solver)
+RUN yt-dlp --remote-components ejs:github --version
 
 # Копируем остальные файлы проекта
 COPY . .
