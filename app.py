@@ -4,6 +4,10 @@ import logging
 import yt_dlp
 import sys
 import subprocess
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import Command
+from aiogram.types import FSInputFile
+from dotenv import load_dotenv
 
 # Настройка логирования
 logging.basicConfig(
@@ -12,11 +16,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Загрузка переменных окружения
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not BOT_TOKEN:
-    logger.error("BOT_TOKEN is not set!")
+    logger.error("BOT_TOKEN is not set in environment variables")
     sys.exit(1)
 
 bot = Bot(token=BOT_TOKEN)
@@ -51,7 +56,7 @@ async def progress_hook(d, message: types.Message, last_update_time):
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
-    # "Прогрев" - принудительно заставляем yt-dlp обновить компоненты через CLI
+    # Принудительная инициализация EJS через консоль
     try:
         subprocess.run(["yt-dlp", "--remote-components", "ejs:github", "--version"], capture_output=True)
     except:
@@ -88,12 +93,12 @@ def download_video(url, message: types.Message, loop):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("👋 Привет! Пришли ссылку на YouTube. Теперь всё должно работать!")
+    await message.answer("👋 Бот запущен локально! Пришли ссылку на видео.")
 
 @dp.message(F.text.regexp(r'^(https?://)'))
 async def handle_link(message: types.Message):
     url = message.text
-    status_msg = await message.answer("⏳ Анализирую (EJS+POT)...")
+    status_msg = await message.answer("⏳ Анализирую...")
     
     loop = asyncio.get_event_loop()
     
@@ -115,8 +120,7 @@ async def handle_link(message: types.Message):
         await status_msg.edit_text(f"❌ Ошибка: {str(e)}")
 
 async def main():
-    logger.info("Bot is starting...")
-    await asyncio.sleep(5)
+    logger.info("Bot is starting locally...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
