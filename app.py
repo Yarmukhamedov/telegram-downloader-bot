@@ -16,7 +16,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Загрузка переменных окружения
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -56,15 +55,14 @@ async def progress_hook(d, message: types.Message, last_update_time):
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
-    # Принудительная инициализация EJS
     try:
         subprocess.run(["yt-dlp", "--remote-components", "ejs:github", "--version"], capture_output=True)
     except:
         pass
 
     ydl_opts = {
-        # ПРИОРИТЕТ H.264 (avc1) — это решает проблему черного экрана в Telegram
-        'format': 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[ext=m4a]/best[height<=1080][vcodec^=avc1]/best[ext=mp4]/best',
+        # ОГРАНИЧЕНИЕ 720p для того, чтобы файл не превышал 50МБ (лимит Telegram)
+        'format': 'bestvideo[height<=720][vcodec^=avc1]+bestaudio[ext=m4a]/best[height<=720][vcodec^=avc1]/best[ext=mp4]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
@@ -89,20 +87,24 @@ def download_video(url, message: types.Message, loop):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info)
-        # Убеждаемся, что расширение .mp4
         mp4_path = os.path.splitext(filename)[0] + '.mp4'
-        if os.path.exists(mp4_path):
-            return mp4_path
-        return filename
+        final_path = mp4_path if os.path.exists(mp4_path) else filename
+        
+        # Проверка размера файла перед возвратом
+        file_size = os.path.getsize(final_path) / (1024 * 1024)
+        if file_size > 50:
+            raise Exception(f"Файл слишком большой ({file_size:.1f} МБ). Лимит Telegram — 50 МБ. Попробуйте видео покороче.")
+            
+        return final_path
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("👋 Бот готов! Теперь видео будут в правильном формате (H.264). Присылай ссылку!")
+    await message.answer("👋 Бот готов! Ограничение на размер видео: 50 МБ (качество 720p).")
 
 @dp.message(F.text.regexp(r'^(https?://)'))
 async def handle_link(message: types.Message):
     url = message.text
-    status_msg = await message.answer("⏳ Обработка видео...")
+    status_msg = await message.answer("⏳ Обработка...")
     
     loop = asyncio.get_event_loop()
     
@@ -113,7 +115,7 @@ async def handle_link(message: types.Message):
         await status_msg.edit_text("✅ Готово! Отправляю...")
         
         video = FSInputFile(file_path)
-        await message.answer_video(video, caption="Ваше видео готово!")
+        await message.answer_video(video, caption="Ваше видео!")
         await status_msg.delete()
         
         if os.path.exists(file_path):
@@ -121,7 +123,7 @@ async def handle_link(message: types.Message):
             
     except Exception as e:
         logger.error(f"Error: {e}")
-        await status_msg.edit_text(f"❌ Ошибка: {str(e)}")
+        await status_msg.edit_text(f"❌ {str(e)}")
 
 async def main():
     logger.info("Bot is starting...")
