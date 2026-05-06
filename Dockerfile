@@ -17,6 +17,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Скачиваем EJS challenge solver скрипты для yt-dlp
+RUN yt-dlp --remote-components ejs:github --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ" || true
+
 # Копируем остальные файлы проекта
 COPY . .
 

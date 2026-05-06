@@ -59,9 +59,12 @@ def download_video(url, message: types.Message, loop):
         'cookiefile': COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
         'merge_output_format': 'mp4',
         'noplaylist': True,
+        # Включаем загрузку EJS скриптов для решения YouTube challenge
+        'enable_remote_components': 'ejs:github',
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'web'],
+                # mweb и web работают с cookies, ios — нет
+                'player_client': ['mweb', 'web'],
             }
         },
         'postprocessors': [{
