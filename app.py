@@ -70,6 +70,13 @@ def get_video_info(url):
         'quiet': True,
         'enable_remote_components': 'ejs:github',
         'ffmpeg_location': get_ffmpeg_path(),
+        'js_runtimes': ['node'],
+        'impersonate': 'chrome',
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'web', 'mweb'],
+            }
+        },
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(url, download=False)
@@ -95,11 +102,19 @@ def download_video(url, message: types.Message, loop):
         'noplaylist': True,
         'enable_remote_components': 'ejs:github',
         'ffmpeg_location': ffmpeg_path,
-        'js_runtimes': {'node': {}},
+        # Принудительно используем Node.js и включаем маскировку
+        'js_runtimes': ['node'],
+        'impersonate': 'chrome',
         'extractor_args': {
             'youtube': {
-                'player_client': ['web', 'mweb', 'tv'],
+                'player_client': ['web', 'mweb', 'tv', 'ios'],
+                'player_skip': ['webpage', 'configs'],
             }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9',
         },
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
