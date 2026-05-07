@@ -71,7 +71,6 @@ def get_video_info(url):
         'enable_remote_components': 'ejs:github',
         'ffmpeg_location': get_ffmpeg_path(),
         'js_runtimes': {'node': {}},
-        'impersonate': 'chrome',
         'extractor_args': {
             'youtube': {
                 'player_client': ['ios', 'web', 'mweb'],
@@ -104,7 +103,6 @@ def download_video(url, message: types.Message, loop):
         'ffmpeg_location': ffmpeg_path,
         # Принудительно используем Node.js и включаем маскировку
         'js_runtimes': {'node': {}},
-        'impersonate': 'chrome',
         'extractor_args': {
             'youtube': {
                 'player_client': ['web', 'mweb', 'tv', 'ios'],
