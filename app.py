@@ -71,9 +71,10 @@ def get_video_info(url):
         'enable_remote_components': 'ejs:github',
         'ffmpeg_location': get_ffmpeg_path(),
         'js_runtimes': {'node': {}},
+        'cachedir': os.path.join(PROJECT_ROOT, '.cache'),
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'web', 'mweb'],
+                'player_client': ['web', 'tv'],
             }
         },
     }
@@ -92,7 +93,6 @@ def download_video(url, message: types.Message, loop):
         logger.warning(f"FFmpeg not found at {ffmpeg_path}")
 
     ydl_opts = {
-        # Приоритет H.264 (avc1) для максимальной совместимости
         'format': 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[ext=m4a]/best[height<=1080][vcodec^=avc1]/best[ext=mp4]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
@@ -101,18 +101,15 @@ def download_video(url, message: types.Message, loop):
         'noplaylist': True,
         'enable_remote_components': 'ejs:github',
         'ffmpeg_location': ffmpeg_path,
-        # Принудительно используем Node.js и включаем маскировку
         'js_runtimes': {'node': {}},
+        'cachedir': os.path.join(PROJECT_ROOT, '.cache'),
         'extractor_args': {
             'youtube': {
-                'player_client': ['web', 'mweb', 'tv', 'ios'],
-                'player_skip': ['webpage', 'configs'],
+                'player_client': ['web', 'tv'],
             }
         },
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9',
         },
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
