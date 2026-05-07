@@ -53,6 +53,15 @@ async def progress_hook(d, message: types.Message, last_update_time):
             except Exception:
                 pass
 
+# Путь к локальному FFmpeg (для Alwaysdata)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
+
+def get_ffmpeg_path():
+    if os.path.exists(LOCAL_FFMPEG):
+        return LOCAL_FFMPEG
+    return "ffmpeg" # Используем системный, если локального нет
+
 def get_video_info(url):
     """Получает информацию о видео без скачивания"""
     ydl_opts = {
@@ -60,6 +69,7 @@ def get_video_info(url):
         'noplaylist': True,
         'quiet': True,
         'enable_remote_components': 'ejs:github',
+        'ffmpeg_location': get_ffmpeg_path(),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(url, download=False)
@@ -67,10 +77,13 @@ def get_video_info(url):
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
+    ffmpeg_path = get_ffmpeg_path()
+    
     try:
-        subprocess.run(["yt-dlp", "--remote-components", "ejs:github", "--version"], capture_output=True)
+        # Проверка версии с учетом пути к ffmpeg
+        subprocess.run([ffmpeg_path, "-version"], capture_output=True)
     except:
-        pass
+        logger.warning(f"FFmpeg not found at {ffmpeg_path}")
 
     ydl_opts = {
         # Приоритет H.264 (avc1) для максимальной совместимости
@@ -81,6 +94,7 @@ def download_video(url, message: types.Message, loop):
         'merge_output_format': 'mp4',
         'noplaylist': True,
         'enable_remote_components': 'ejs:github',
+        'ffmpeg_location': ffmpeg_path,
         'js_runtimes': {'node': {}},
         'extractor_args': {
             'youtube': {
