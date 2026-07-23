@@ -185,10 +185,10 @@ async def handle_link(message: types.Message):
 
 async def main():
     logger.info("Bot is starting...")
-    proxy_url = os.getenv("TELEGRAM_PROXY")
-    connector = TCPConnector(family=socket.AF_INET)
-    session = AiohttpSession(connector=connector, proxy=proxy_url) if proxy_url else AiohttpSession(connector=connector)
+    proxy_url = os.getenv("TELEGRAM_PROXY", "socks5://127.0.0.1:4001")
+    logger.info(f"Using Telegram Proxy: {proxy_url}")
     
+    session = AiohttpSession(proxy=proxy_url)
     bot = Bot(token=BOT_TOKEN, session=session)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
