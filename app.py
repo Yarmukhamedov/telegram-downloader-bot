@@ -16,6 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import socket
+from aiohttp import TCPConnector
+from aiogram.client.session.aiohttp import AiohttpSession
+
 # Загрузка переменных окружения
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -24,7 +28,12 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN is not set!")
     sys.exit(1)
 
-bot = Bot(token=BOT_TOKEN)
+# Принудительно используем IPv4 для Telegram API (решает проблему таймаутов)
+proxy_url = os.getenv("TELEGRAM_PROXY")
+connector = TCPConnector(family=socket.AF_INET)
+session = AiohttpSession(connector=connector, proxy=proxy_url) if proxy_url else AiohttpSession(connector=connector)
+
+bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
 COOKIES_PATH = "cookies.txt"
