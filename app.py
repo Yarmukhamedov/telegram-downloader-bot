@@ -131,22 +131,41 @@ def download_video(url, message: types.Message, loop):
             return mp4_path
         return filename
 
+import re
+
+def extract_url(text: str) -> str | None:
+    """Извлекает первую ссылку из текста"""
+    if not text:
+        return None
+    match = re.search(r'(https?://[^\s]+)', text)
+    if match:
+        return match.group(1)
+    if 'youtu' in text:
+        # Для коротких ссылок без http
+        match = re.search(r'((?:youtu\.be/|youtube\.com/)[^\s]+)', text)
+        if match:
+            return 'https://' + match.group(1)
+    return None
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("👋 Привет! Я скачиваю видео в лучшем качестве (до 50 МБ).\nПросто пришли мне ссылку!")
+    logger.info(f"Received /start from user {message.from_user.id}")
+    await message.answer("👋 Привет! Я скачиваю видео из YouTube в лучшем качестве (до 50 МБ).\nПросто пришли мне ссылку на видео!")
 
-@dp.message(F.text.regexp(r'^(https?://)'))
-async def handle_link(message: types.Message):
-    url = message.text
-    status_msg = await message.answer("🔍 Проверяю размер файла...")
+@dp.message(F.text)
+async def handle_text_message(message: types.Message):
+    url = extract_url(message.text)
+    logger.info(f"Received message from user {message.from_user.id}: {message.text}")
     
+    if not url:
+        await message.answer("ℹ️ Пожалуйста, отправьте мне ссылку на видео из YouTube (например: https://youtu.be/...)")
+        return
+
+    status_msg = await message.answer("🔍 Проверяю размер файла...")
     loop = asyncio.get_event_loop()
     
     try:
-        # Сначала проверяем информацию о файле
         info = await loop.run_in_executor(None, get_video_info, url)
-        
-        # Пытаемся определить размер (в байтах)
         filesize = info.get('filesize') or info.get('filesize_approx')
         
         if filesize and filesize > 50 * 1024 * 1024:
@@ -163,7 +182,6 @@ async def handle_link(message: types.Message):
         os.makedirs("downloads", exist_ok=True)
         file_path = await loop.run_in_executor(None, download_video, url, status_msg, loop)
         
-        # Дополнительная проверка реального размера после скачивания
         real_size = os.path.getsize(file_path)
         if real_size > 50 * 1024 * 1024:
             os.remove(file_path)
@@ -180,8 +198,8 @@ async def handle_link(message: types.Message):
             os.remove(file_path)
             
     except Exception as e:
-        logger.error(f"Error: {e}")
-        await status_msg.edit_text(f"❌ Произошла ошибка: {str(e)}")
+        logger.error(f"Error processing URL {url}: {e}")
+        await status_msg.edit_text(f"❌ Произошла ошибка при скачивании: {str(e)}")
 
 async def main():
     logger.info("Bot is starting...")
