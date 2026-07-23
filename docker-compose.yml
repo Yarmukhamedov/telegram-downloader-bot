@@ -1,0 +1,7 @@
+services:
+  bot:
+    build: .
+    container_name: telegram-downloader-bot
+    restart: unless-stopped
+    env_file:
+      - .env
