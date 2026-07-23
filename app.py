@@ -28,12 +28,6 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN is not set!")
     sys.exit(1)
 
-# Принудительно используем IPv4 для Telegram API (решает проблему таймаутов)
-proxy_url = os.getenv("TELEGRAM_PROXY")
-connector = TCPConnector(family=socket.AF_INET)
-session = AiohttpSession(connector=connector, proxy=proxy_url) if proxy_url else AiohttpSession(connector=connector)
-
-bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
 COOKIES_PATH = "cookies.txt"
@@ -191,6 +185,11 @@ async def handle_link(message: types.Message):
 
 async def main():
     logger.info("Bot is starting...")
+    proxy_url = os.getenv("TELEGRAM_PROXY")
+    connector = TCPConnector(family=socket.AF_INET)
+    session = AiohttpSession(connector=connector, proxy=proxy_url) if proxy_url else AiohttpSession(connector=connector)
+    
+    bot = Bot(token=BOT_TOKEN, session=session)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
