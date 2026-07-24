@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import json
+import time
 import shutil
 import asyncio
 import logging
@@ -47,17 +48,26 @@ if not BOT_TOKEN:
 def is_bot_api_available(server_url: str) -> bool:
     if not server_url:
         return False
-    try:
-        url = f"{server_url.rstrip('/')}/bot{BOT_TOKEN}/getMe"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=3) as response:
-            return response.status in (200, 401, 404, 400)
-    except urllib.error.HTTPError as e:
-        # HTTP response from Local Bot API server means the server IS running!
-        return e.code in (200, 401, 404, 400)
-    except Exception as e:
-        logger.warning(f"Local Bot API server '{server_url}' not reachable ({e}). Using official api.telegram.org")
-        return False
+    
+    logger.info(f"Checking Local Bot API server availability at '{server_url}'...")
+    for attempt in range(1, 11):
+        try:
+            url = f"{server_url.rstrip('/')}/bot{BOT_TOKEN}/getMe"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=3) as response:
+                if response.status in (200, 401, 404, 400):
+                    logger.info(f"Local Bot API server '{server_url}' is READY!")
+                    return True
+        except urllib.error.HTTPError as e:
+            if e.code in (200, 401, 404, 400):
+                logger.info(f"Local Bot API server '{server_url}' is READY (HTTP {e.code})!")
+                return True
+        except Exception as e:
+            logger.info(f"Waiting for Local Bot API server... (attempt {attempt}/10): {e}")
+            time.sleep(1)
+
+    logger.warning(f"Local Bot API server '{server_url}' not reachable after 10 attempts. Falling back to api.telegram.org")
+    return False
 
 bot_api_server = os.getenv("BOT_API_SERVER")
 proxy_url = os.getenv("TELEGRAM_PROXY")
