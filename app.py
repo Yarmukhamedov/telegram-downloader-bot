@@ -143,20 +143,12 @@ async def progress_hook(d, message: types.Message, last_update_time):
 def get_base_ydl_opts():
     ffmpeg_path = get_ffmpeg_path()
     
-    extractor_args = {
-        "youtube": {
-            "player_client": ["web", "mweb", "android", "ios"],
-            "po_token": ["web+http://127.0.0.1:4416/gvis"],
-        }
-    }
-
     ydl_opts = {
-        "format": "bestvideo+bestaudio/best",
+        "format": "bestvideo+bestaudio/bestvideo/best",
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
         "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
-        "extractor_args": extractor_args,
         "http_headers": {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         },
@@ -206,7 +198,7 @@ def extract_url(text: str) -> str | None:
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     logger.info(f"Received /start from user {message.from_user.id}")
-    await message.answer("👋 Привет! Я скачиваю видео из YouTube в максимальном оригинальном качестве без сжатия.\nПросто пришли мне ссылку на видео!")
+    await message.answer("👋 Привет! Я скачиваю видео из YouTube в максимальном оригинальном качестве (HD/4K).\nПросто пришли мне ссылку на видео!")
 
 @dp.message(F.text)
 async def handle_text_message(message: types.Message):
