@@ -363,24 +363,19 @@ async def create_bot_instance() -> Bot:
     candidate_urls = []
     if bot_api_env:
         candidate_urls.append(bot_api_env)
-    candidate_urls.extend(["http://127.0.0.1:8081", "http://localhost:8081", "http://telegram-bot-api:8081"])
+    candidate_urls.extend(["http://127.0.0.1:8081", "http://localhost:8081"])
 
     chosen_api_url = None
-    for attempt in range(1, 16):
-        for candidate in candidate_urls:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    url = f"{candidate.rstrip('/')}/bot{BOT_TOKEN}/getMe"
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.5)) as resp:
-                        if resp.status in (200, 400, 401, 404):
-                            chosen_api_url = candidate
-                            break
-            except Exception:
-                pass
-        if chosen_api_url:
-            break
-        logger.info(f"Connecting to Local Bot API (attempt {attempt}/15)...")
-        await asyncio.sleep(1)
+    for candidate in candidate_urls:
+        try:
+            async with aiohttp.ClientSession() as session:
+                url = f"{candidate.rstrip('/')}/bot{BOT_TOKEN}/getMe"
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=1)) as resp:
+                    if resp.status in (200, 400, 401, 404):
+                        chosen_api_url = candidate
+                        break
+        except Exception:
+            pass
 
     if chosen_api_url:
         logger.info(f"✅ Connected to Local Bot API Server at: {chosen_api_url}")
@@ -388,7 +383,7 @@ async def create_bot_instance() -> Bot:
         session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
         return Bot(token=BOT_TOKEN, session=session)
     else:
-        logger.warning("⚠️ Local Bot API not reachable. Using default api.telegram.org")
+        logger.info("ℹ️ Local Bot API not active. Using standard Telegram API.")
         session = AiohttpSession(proxy=proxy_url) if proxy_url else None
         return Bot(token=BOT_TOKEN, session=session) if session else Bot(token=BOT_TOKEN)
 
@@ -401,7 +396,7 @@ async def main():
         await bot_instance.delete_webhook(drop_pending_updates=True)
         bot_info = await bot_instance.get_me()
         logger.info(f"🤖 Connected Bot Username: @{bot_info.username} (ID: {bot_info.id})")
-        logger.info("🚀 Bot is starting polling...")
+        logger.info(f"🚀 Bot @{bot_info.username} is now online and active!")
         await dp.start_polling(bot_instance)
     except Exception as e:
         logger.error(f"❌ Error during bot polling startup: {e}")
