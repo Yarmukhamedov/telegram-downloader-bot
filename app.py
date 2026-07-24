@@ -140,11 +140,11 @@ async def progress_hook(d, message: types.Message, last_update_time):
             except Exception:
                 pass
 
-def get_base_ydl_opts():
+def get_base_ydl_opts(use_cookies=True):
     ffmpeg_path = get_ffmpeg_path()
     
     ydl_opts = {
-        "format": "bestvideo+bestaudio/bestvideo/best",
+        "format": "bv*+ba/b",
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
@@ -157,31 +157,55 @@ def get_base_ydl_opts():
         }
     }
 
-    if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+    if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
         logger.info(f"Using cookies from {COOKIES_PATH}")
         ydl_opts["cookiefile"] = COOKIES_PATH
 
     return ydl_opts
 
 def get_video_info(url):
-    ydl_opts = get_base_ydl_opts()
+    ydl_opts = get_base_ydl_opts(use_cookies=True)
     ydl_opts["quiet"] = True
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(url, download=False)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            return ydl.extract_info(url, download=False)
+    except Exception:
+        ydl_opts_nocookies = get_base_ydl_opts(use_cookies=False)
+        ydl_opts_nocookies["quiet"] = True
+        with yt_dlp.YoutubeDL(ydl_opts_nocookies) as ydl:
+            return ydl.extract_info(url, download=False)
 
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
-    ydl_opts = get_base_ydl_opts()
-    ydl_opts["logger"] = MyLogger()
-    ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
-    ydl_opts["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)]
+    
+    # 1. Попытка с cookies и bv*+ba/b
+    try:
+        ydl_opts = get_base_ydl_opts(use_cookies=True)
+        ydl_opts["logger"] = MyLogger()
+        ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
+        ydl_opts["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)]
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
-        mp4_path = os.path.splitext(filename)[0] + ".mp4"
-        final_file = mp4_path if os.path.exists(mp4_path) else filename
-        return final_file, info
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            mp4_path = os.path.splitext(filename)[0] + ".mp4"
+            final_file = mp4_path if os.path.exists(mp4_path) else filename
+            return final_file, info
+    except Exception as e:
+        logger.warning(f"Primary format download with cookies failed: {e}. Trying fallback without cookies...")
+        
+        # 2. Фолбэк без cookies va uniformal format selector
+        ydl_opts_fallback = get_base_ydl_opts(use_cookies=False)
+        ydl_opts_fallback["logger"] = MyLogger()
+        ydl_opts_fallback["outtmpl"] = "downloads/%(id)s.%(ext)s"
+        ydl_opts_fallback["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)]
+
+        with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            mp4_path = os.path.splitext(filename)[0] + ".mp4"
+            final_file = mp4_path if os.path.exists(mp4_path) else filename
+            return final_file, info
 
 def extract_url(text: str) -> str | None:
     if not text:
