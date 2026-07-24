@@ -109,10 +109,6 @@ def download_video(url, message: types.Message, loop):
             'preferedformat': 'mp4',
         }],
     }
-
-    if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
-        ydl_opts['cookiefile'] = COOKIES_PATH
-
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info)
