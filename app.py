@@ -122,41 +122,6 @@ def create_video_thumbnail(file_path: str, output_thumb_path: str):
         logger.error(f"Thumbnail error: {e}")
     return None
 
-def compress_video_high_quality(file_path: str, target_max_mb: float = 49.0) -> str:
-    current_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-    if current_size_mb <= target_max_mb:
-        return file_path
-
-    compressed_path = os.path.splitext(file_path)[0] + "_compressed.mp4"
-    logger.info(f"File size {current_size_mb:.1f}MB exceeds {target_max_mb}MB. Compressing maintaining high quality...")
-    
-    ffmpeg_path = get_ffmpeg_path()
-    cmd = [
-        ffmpeg_path,
-        "-y",
-        "-i", file_path,
-        "-c:v", "libx264",
-        "-crf", "22",
-        "-preset", "medium",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-movflags", "+faststart",
-        compressed_path
-    ]
-    try:
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        if os.path.exists(compressed_path) and os.path.getsize(compressed_path) <= 50 * 1024 * 1024:
-            os.remove(file_path)
-            return compressed_path
-        if os.path.exists(compressed_path):
-            os.remove(compressed_path)
-    except Exception as e:
-        logger.error(f"Compression error: {e}")
-        if os.path.exists(compressed_path):
-            os.remove(compressed_path)
-            
-    return file_path
-
 async def progress_hook(d, message: types.Message, last_update_time):
     if d["status"] == "downloading":
         p = d.get("_percent_str", "0%")
@@ -235,7 +200,7 @@ def extract_url(text: str) -> str | None:
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     logger.info(f"Received /start from user {message.from_user.id}")
-    await message.answer("👋 Привет! Я скачиваю видео из YouTube в максимальном оригинальном качестве (сохраняя точные пропорции и размеры).\nПросто пришли мне ссылку на видео!")
+    await message.answer("👋 Привет! Я скачиваю видео из YouTube в максимальном оригинальном качестве без сжатия.\nПросто пришли мне ссылку на видео!")
 
 @dp.message(F.text)
 async def handle_text_message(message: types.Message):
@@ -251,17 +216,9 @@ async def handle_text_message(message: types.Message):
     
     try:
         os.makedirs("downloads", exist_ok=True)
-        await status_msg.edit_text("⏳ Начинаю скачивание в максимальном оригинальном качестве...")
+        await status_msg.edit_text("⏳ Начинаю скачивание в 100% оригинальном качестве (без сжатия)...")
         
         file_path, video_info = await loop.run_in_executor(None, download_video, url, status_msg, loop)
-        
-        file_path = await loop.run_in_executor(None, compress_video_high_quality, file_path, 49.0)
-        
-        real_size = os.path.getsize(file_path)
-        if real_size > 50 * 1024 * 1024:
-            os.remove(file_path)
-            await status_msg.edit_text("❌ К сожалению, видео превышает 50 МБ даже после сжатия без потери качества.")
-            return
 
         await status_msg.edit_text("✅ Готово! Подготавливаю и отправляю видео...")
         
