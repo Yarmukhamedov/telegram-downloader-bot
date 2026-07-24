@@ -367,29 +367,20 @@ async def inline_search_handler(inline_query: types.InlineQuery):
 
 async def create_bot_instance() -> Bot:
     proxy_url = os.getenv("TELEGRAM_PROXY")
-    bot_api_env = os.getenv("BOT_API_SERVER", "http://telegram-bot-api:8081")
+    bot_api_env = os.getenv("BOT_API_SERVER")
     
-    candidate_urls = [bot_api_env, "http://telegram-bot-api:8081", "http://127.0.0.1:8081", "http://localhost:8081"]
-
     chosen_api_url = None
-    logger.info("⏳ Connecting to Local Bot API Server (2GB upload mode)...")
-    
-    for attempt in range(1, 31):
+    if bot_api_env:
+        candidate_urls = [bot_api_env, "http://127.0.0.1:8081", "http://localhost:8081"]
         for candidate in candidate_urls:
             try:
                 async with aiohttp.ClientSession() as session:
                     url = f"{candidate.rstrip('/')}/bot{BOT_TOKEN}/getMe"
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
-                        # Any HTTP status response means the port is OPEN and responding!
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.5)) as resp:
                         chosen_api_url = candidate
-                        logger.info(f"✅ Local Bot API responded at '{candidate}' with HTTP status {resp.status}!")
                         break
-            except Exception as e:
+            except Exception:
                 pass
-        if chosen_api_url:
-            break
-        logger.info(f"⏳ Waiting for Local Bot API server at {bot_api_env} (attempt {attempt}/30)...")
-        await asyncio.sleep(1)
 
     if chosen_api_url:
         logger.info(f"🚀 ✅ SUCCESS: Connected to Local Bot API Server at: {chosen_api_url} (2GB Limit Active!)")
@@ -399,7 +390,7 @@ async def create_bot_instance() -> Bot:
         bot_inst._is_local_api = True
         return bot_inst
     else:
-        logger.warning("⚠️ Local Bot API not reachable. Falling back to default api.telegram.org (50MB Limit)")
+        logger.info("🌐 Using Direct Telegram API (Host WARP Network mode)")
         session = AiohttpSession(proxy=proxy_url) if proxy_url else None
         bot_inst = Bot(token=BOT_TOKEN, session=session) if session else Bot(token=BOT_TOKEN)
         bot_inst._is_local_api = False
