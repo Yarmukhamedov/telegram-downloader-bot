@@ -5,6 +5,7 @@ services:
     image: aiogram/telegram-bot-api:latest
     container_name: telegram-bot-api
     restart: unless-stopped
+    user: "0:0"
     environment:
       TELEGRAM_API_ID: "38969193"
       TELEGRAM_API_HASH: "553d816eeb61041699cf50948c04e3c5"

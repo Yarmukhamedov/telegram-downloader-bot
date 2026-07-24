@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import json
+import time
 import shutil
 import asyncio
 import logging
@@ -356,21 +357,25 @@ async def create_bot_instance() -> Bot:
     
     use_local_api = False
     if bot_api_server:
-        try:
-            async with aiohttp.ClientSession() as session:
-                url = f"{bot_api_server.rstrip('/')}/bot{BOT_TOKEN}/getMe"
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
-                    if resp.status in (200, 400, 401, 404):
-                        use_local_api = True
-        except Exception as e:
-            logger.warning(f"Local Bot API server check failed: {e}. Falling back to official api.telegram.org")
+        for attempt in range(1, 6):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    url = f"{bot_api_server.rstrip('/')}/bot{BOT_TOKEN}/getMe"
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                        if resp.status in (200, 400, 401, 404):
+                            use_local_api = True
+                            break
+            except Exception as e:
+                logger.info(f"Connecting to Local Bot API '{bot_api_server}' (attempt {attempt}/5)...")
+                await asyncio.sleep(1)
 
     if use_local_api:
-        logger.info(f"Connected to Local Bot API Server: {bot_api_server}")
+        logger.info(f"✅ Successfully connected to Local Bot API Server: {bot_api_server}")
         api = TelegramAPIServer.from_base(bot_api_server)
         session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
         return Bot(token=BOT_TOKEN, session=session)
     else:
+        logger.warning("⚠️ Local Bot API not reachable. Using default api.telegram.org")
         session = AiohttpSession(proxy=proxy_url) if proxy_url else None
         return Bot(token=BOT_TOKEN, session=session) if session else Bot(token=BOT_TOKEN)
 
@@ -384,7 +389,12 @@ async def main():
     await dp.start_polling(bot_instance)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Bot stopped!")
+    while True:
+        try:
+            asyncio.run(main())
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Bot manually stopped!")
+            break
+        except Exception as e:
+            logger.error(f"Bot encountered unhandled exception: {e}. Auto-reconnecting in 5 seconds...")
+            time.sleep(5)
