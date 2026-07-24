@@ -71,6 +71,7 @@ async def check_channel_subscription(user_id: int, bot_inst: Bot) -> tuple[bool,
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
+    logger.info(f">>> /start command received from user_id: {message.from_user.id} ({message.from_user.full_name})")
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
     admin_ids = get_admin_ids()
     is_admin = message.from_user.id in admin_ids
@@ -87,6 +88,7 @@ async def cmd_start(message: types.Message):
 @dp.message(Command("settings"))
 @dp.message(F.text == "⚙️ Sozlamalar")
 async def cmd_settings(message: types.Message):
+    logger.info(f">>> Sozlamalar clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id)
     quality = user['preferred_quality']
     
@@ -116,6 +118,7 @@ async def cb_set_quality(callback: types.CallbackQuery):
 
 @dp.message(F.text == "👤 Profil / Tarif")
 async def cmd_profile(message: types.Message):
+    logger.info(f">>> Profil clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
     
     status_str = "⭐ Premium (Cheksiz)" if user['is_premium'] else "🆓 Bepul (Free)"
@@ -142,6 +145,7 @@ async def cmd_profile(message: types.Message):
 
 @dp.message(F.text == "ℹ️ Yordam")
 async def cmd_help(message: types.Message):
+    logger.info(f">>> Help clicked by user_id: {message.from_user.id}")
     text = (
         "ℹ️ **Botdan foydalanish yordami**\n\n"
         "1. **Qo'llab-quvvatlanadigan platformalar:**\n"
@@ -168,6 +172,7 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
 
 @dp.message(F.text)
 async def handle_media_download(message: types.Message, bot: Bot):
+    logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
     if message.text in ["⚙️ Sozlamalar", "👤 Profil / Tarif", "ℹ️ Yordam", "🛠 Admin Panel"]:
         return
 
@@ -383,8 +388,14 @@ async def main():
     logger.info("Initializing database...")
     await init_db()
     
-    logger.info("Bot is starting...")
     bot_instance = await create_bot_instance()
+    try:
+        bot_info = await bot_instance.get_me()
+        logger.info(f"🤖 Connected Bot Username: @{bot_info.username} (ID: {bot_info.id})")
+    except Exception as e:
+        logger.error(f"❌ Failed to fetch bot_info: {e}")
+
+    logger.info("Bot is starting polling...")
     await bot_instance.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot_instance)
 
