@@ -13,6 +13,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import FSInputFile, InlineQueryResultArticle, InputTextMessageContent
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 
 from database import (
     init_db, get_or_create_user, update_user_quality, record_download,
@@ -42,7 +43,14 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN is not set!")
     sys.exit(1)
 
-bot = Bot(token=BOT_TOKEN)
+bot_api_server = os.getenv("BOT_API_SERVER")
+if bot_api_server:
+    logger.info(f"Using Local Telegram Bot API Server: {bot_api_server}")
+    session = AiohttpSession(api=TelegramAPIServer.from_base(bot_api_server))
+    bot = Bot(token=BOT_TOKEN, session=session)
+else:
+    bot = Bot(token=BOT_TOKEN)
+
 dp = Dispatcher()
 dp.include_router(admin_router)
 
@@ -368,10 +376,14 @@ async def main():
     
     logger.info("Bot is starting...")
     proxy_url = os.getenv("TELEGRAM_PROXY")
+    bot_api_server = os.getenv("BOT_API_SERVER")
     
     if proxy_url:
         logger.info(f"Using Telegram Proxy: {proxy_url}")
-        session = AiohttpSession(proxy=proxy_url)
+        if bot_api_server:
+            session = AiohttpSession(proxy=proxy_url, api=TelegramAPIServer.from_base(bot_api_server))
+        else:
+            session = AiohttpSession(proxy=proxy_url)
         bot_instance = Bot(token=BOT_TOKEN, session=session)
         await bot_instance.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot_instance)
