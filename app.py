@@ -23,7 +23,8 @@ from database import (
 )
 from downloader import (
     detect_platform_and_url, download_media, get_video_metadata,
-    ensure_h264_codec, convert_to_mp3, create_video_thumbnail
+    ensure_h264_codec, convert_to_mp3, create_video_thumbnail,
+    compress_video_to_target_size
 )
 from keyboards import (
     get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
@@ -278,6 +279,15 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
 
         else:
             file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
+            
+            # Check if file > 49 MB and compress if running on standard Telegram API
+            is_local_api = hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            
+            if not is_local_api and file_size_mb > 49.0:
+                await status_msg.edit_text("⚡️ Video 50 MB dan katta. Telegram uchun sifatli siqilmoqda...")
+                file_path = await loop.run_in_executor(None, compress_video_to_target_size, file_path, 48.0)
+
             await status_msg.edit_text("✅ Tayyor! Telegram'ga yuborilmoqda...")
             
             width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
@@ -379,7 +389,7 @@ async def create_bot_instance() -> Bot:
 
     if chosen_api_url:
         logger.info(f"✅ Connected to Local Bot API Server at: {chosen_api_url}")
-        api = TelegramAPIServer.from_base(chosen_api_url)
+        api = TelegramAPIServer.from_base(chosen_api_url, is_local=True)
         session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
         return Bot(token=BOT_TOKEN, session=session)
     else:

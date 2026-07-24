@@ -3,50 +3,37 @@ import re
 import sys
 import json
 import shutil
-import asyncio
 import logging
 import subprocess
 import yt_dlp
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
-COOKIES_PATH = "cookies.txt"
+COOKIES_PATH = os.path.join(PROJECT_ROOT, "cookies.txt")
 
 def get_ffmpeg_path():
-    if os.path.exists(LOCAL_FFMPEG):
-        return LOCAL_FFMPEG
-    return shutil.which("ffmpeg") or "ffmpeg"
+    p = shutil.which("ffmpeg")
+    return p if p else "ffmpeg"
 
 def get_ffprobe_path():
-    ffmpeg_p = get_ffmpeg_path()
-    if ffmpeg_p and "ffmpeg" in ffmpeg_p:
-        candidate = ffmpeg_p.replace("ffmpeg", "ffprobe")
-        if os.path.exists(candidate):
-            return candidate
-    return shutil.which("ffprobe") or "ffprobe"
+    p = shutil.which("ffprobe")
+    return p if p else "ffprobe"
 
-def detect_platform_and_url(text: str) -> tuple[str | None, str | None, str | None]:
-    """
-    Detects platform, returns (platform_name, platform_icon, clean_url)
-    """
-    if not text:
+def detect_platform_and_url(text: str) -> tuple[str, str, str]:
+    url_match = re.search(r'https?://[^\s]+', text)
+    if not url_match:
         return None, None, None
 
-    match = re.search(r'(https?://[^\s]+)', text)
-    if not match:
-        if 'youtu' in text:
-            m = re.search(r'((?:youtu\.be/|youtube\.com/)[^\s]+)', text)
-            if m:
-                return "YouTube", "🎬", "https://" + m.group(1)
-        return None, None, None
+    url = url_match.group(0)
 
-    url = match.group(1)
-    
     if "youtube.com" in url or "youtu.be" in url:
         return "YouTube", "🎬", url
-    elif "tiktok.com" in url or "vt.tiktok.com" in url:
+    elif "tiktok.com" in url:
         return "TikTok", "🎵", url
     elif "instagram.com" in url:
         return "Instagram", "📸", url
@@ -147,10 +134,6 @@ def get_video_metadata(file_path: str):
         return None, None, None
 
 def ensure_h264_codec(file_path: str) -> str:
-    """
-    Checks if video codec is H.264. If AV1 or VP9, converts to H.264 (CRF 18 ultrafast)
-    for seamless playback in Telegram player.
-    """
     ffprobe_path = get_ffprobe_path()
     cmd_probe = [
         ffprobe_path,
@@ -194,10 +177,56 @@ def ensure_h264_codec(file_path: str) -> str:
         
     return file_path
 
+def compress_video_to_target_size(file_path: str, target_mb: float = 48.0) -> str:
+    """
+    Compresses video using ffmpeg so that final size < 49 MB
+    for standard Telegram Bot API compatibility.
+    """
+    if not os.path.exists(file_path):
+        return file_path
+    
+    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+    if file_size_mb <= target_mb:
+        return file_path
+
+    logger.info(f"File size is {file_size_mb:.2f} MB > {target_mb} MB limit. Auto-compressing video...")
+    
+    width, height, duration = get_video_metadata(file_path)
+    if not duration or duration <= 0:
+        duration = 60
+        
+    target_total_bitrate = (target_mb * 8 * 1024 * 1024 * 0.95) / duration
+    audio_bitrate = 128 * 1024
+    video_bitrate = max(int((target_total_bitrate - audio_bitrate) / 1000), 200)
+
+    compressed_path = os.path.splitext(file_path)[0] + "_compressed.mp4"
+    ffmpeg_path = get_ffmpeg_path()
+    
+    cmd = [
+        ffmpeg_path,
+        "-y",
+        "-i", file_path,
+        "-c:v", "libx264",
+        "-b:v", f"{video_bitrate}k",
+        "-maxrate", f"{int(video_bitrate * 1.5)}k",
+        "-bufsize", f"{int(video_bitrate * 2)}k",
+        "-preset", "veryfast",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        compressed_path
+    ]
+    try:
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        if os.path.exists(compressed_path) and os.path.getsize(compressed_path) > 0:
+            os.remove(file_path)
+            return compressed_path
+    except Exception as e:
+        logger.error(f"Error compressing video: {e}")
+        
+    return file_path
+
 def convert_to_mp3(file_path: str) -> str:
-    """
-    Converts video/audio file to MP3 format using ffmpeg.
-    """
     mp3_path = os.path.splitext(file_path)[0] + ".mp3"
     ffmpeg_path = get_ffmpeg_path()
     cmd = [
@@ -240,11 +269,6 @@ def create_video_thumbnail(file_path: str, output_thumb_path: str):
     return None
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
-    """
-    Downloads media file according to specified quality.
-    Returns (final_file_path, video_info)
-    """
-    # 1. Primary try with cookies
     try:
         ydl_opts = get_base_ydl_opts(quality=quality, use_cookies=True)
         ydl_opts["logger"] = MyLogger()
