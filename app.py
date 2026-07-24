@@ -239,7 +239,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
     
     last_update_time = [loop.time()]
 
-    async def progress_hook(d):
+    def progress_hook(d):
         if d['status'] == 'downloading':
             p = d.get('_percent_str', '0%')
             speed = d.get('_speed_str', 'N/A')
@@ -247,10 +247,10 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             
             current_time = loop.time()
             if current_time - last_update_time[0] > 3:
+                last_update_time[0] = current_time
                 try:
                     text = f"⏳ **{platform}** yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}"
-                    await status_msg.edit_text(text, parse_mode="Markdown")
-                    last_update_time[0] = current_time
+                    asyncio.run_coroutine_threadsafe(status_msg.edit_text(text, parse_mode="Markdown"), loop)
                 except Exception:
                     pass
 
@@ -371,7 +371,7 @@ async def create_bot_instance() -> Bot:
     
     chosen_api_url = None
     if bot_api_env:
-        candidate_urls = [bot_api_env, "http://127.0.0.1:8081", "http://localhost:8081"]
+        candidate_urls = [bot_api_env, "http://telegram-bot-api:8081", "http://127.0.0.1:8081", "http://localhost:8081"]
         for candidate in candidate_urls:
             try:
                 async with aiohttp.ClientSession() as session:
