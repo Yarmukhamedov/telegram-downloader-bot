@@ -7,6 +7,7 @@ import asyncio
 import logging
 import subprocess
 import urllib.request
+import urllib.error
 import yt_dlp
 from dotenv import load_dotenv
 
@@ -49,8 +50,11 @@ def is_bot_api_available(server_url: str) -> bool:
     try:
         url = f"{server_url.rstrip('/')}/bot{BOT_TOKEN}/getMe"
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=2) as response:
-            return response.status in (200, 401, 404)
+        with urllib.request.urlopen(req, timeout=3) as response:
+            return response.status in (200, 401, 404, 400)
+    except urllib.error.HTTPError as e:
+        # HTTP response from Local Bot API server means the server IS running!
+        return e.code in (200, 401, 404, 400)
     except Exception as e:
         logger.warning(f"Local Bot API server '{server_url}' not reachable ({e}). Using official api.telegram.org")
         return False
