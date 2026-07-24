@@ -2,13 +2,11 @@ import os
 import re
 import sys
 import json
-import time
 import shutil
 import asyncio
 import logging
 import subprocess
-import urllib.request
-import urllib.error
+import aiohttp
 import yt_dlp
 from dotenv import load_dotenv
 
@@ -45,52 +43,11 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN is not set!")
     sys.exit(1)
 
-def is_bot_api_available(server_url: str) -> bool:
-    if not server_url:
-        return False
-    
-    logger.info(f"Checking Local Bot API server availability at '{server_url}'...")
-    for attempt in range(1, 11):
-        try:
-            url = f"{server_url.rstrip('/')}/bot{BOT_TOKEN}/getMe"
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=3) as response:
-                if response.status in (200, 401, 404, 400):
-                    logger.info(f"Local Bot API server '{server_url}' is READY!")
-                    return True
-        except urllib.error.HTTPError as e:
-            if e.code in (200, 401, 404, 400):
-                logger.info(f"Local Bot API server '{server_url}' is READY (HTTP {e.code})!")
-                return True
-        except Exception as e:
-            logger.info(f"Waiting for Local Bot API server... (attempt {attempt}/10): {e}")
-            time.sleep(1)
-
-    logger.warning(f"Local Bot API server '{server_url}' not reachable after 10 attempts. Falling back to api.telegram.org")
-    return False
-
-bot_api_server = os.getenv("BOT_API_SERVER")
-proxy_url = os.getenv("TELEGRAM_PROXY")
-
-def create_bot_instance():
-    if bot_api_server and is_bot_api_available(bot_api_server):
-        logger.info(f"Connected to Local Bot API Server: {bot_api_server}")
-        api = TelegramAPIServer.from_base(bot_api_server)
-        session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
-    else:
-        session = AiohttpSession(proxy=proxy_url) if proxy_url else None
-
-    if session:
-        return Bot(token=BOT_TOKEN, session=session)
-    return Bot(token=BOT_TOKEN)
-
-bot = create_bot_instance()
 dp = Dispatcher()
 dp.include_router(admin_router)
-
 url_cache = {}
 
-async def check_channel_subscription(user_id: int) -> tuple[bool, str, str]:
+async def check_channel_subscription(user_id: int, bot_inst: Bot) -> tuple[bool, str, str]:
     admin_ids = get_admin_ids()
     if user_id in admin_ids:
         return True, "", ""
@@ -102,7 +59,7 @@ async def check_channel_subscription(user_id: int) -> tuple[bool, str, str]:
         return True, "", ""
 
     try:
-        member = await bot.get_chat_member(chat_id=ch_id, user_id=user_id)
+        member = await bot_inst.get_chat_member(chat_id=ch_id, user_id=user_id)
         if member.status in ["creator", "administrator", "member"]:
             return True, ch_id, ch_link
     except Exception as e:
@@ -200,8 +157,8 @@ async def cmd_help(message: types.Message):
     await message.answer(text, parse_mode="Markdown")
 
 @dp.callback_query(F.data == "check_subscription")
-async def cb_check_sub(callback: types.CallbackQuery):
-    is_sub, ch_id, ch_link = await check_channel_subscription(callback.from_user.id)
+async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
+    is_sub, ch_id, ch_link = await check_channel_subscription(callback.from_user.id, bot)
     if is_sub:
         await callback.message.edit_text("✅ Rahmat! Obuna tasdiqlandi. Endi botdan to'liq foydalanishingiz mumkin! 🚀")
         await callback.answer()
@@ -209,11 +166,11 @@ async def cb_check_sub(callback: types.CallbackQuery):
         await callback.answer("❌ Siz hali kanalga obuna bo'lmadingiz!", show_alert=True)
 
 @dp.message(F.text)
-async def handle_media_download(message: types.Message):
+async def handle_media_download(message: types.Message, bot: Bot):
     if message.text in ["⚙️ Sozlamalar", "👤 Profil / Tarif", "ℹ️ Yordam", "🛠 Admin Panel"]:
         return
 
-    is_sub, ch_id, ch_link = await check_channel_subscription(message.from_user.id)
+    is_sub, ch_id, ch_link = await check_channel_subscription(message.from_user.id, bot)
     if not is_sub:
         text = (
             "⚠️ **Botdan foydalanish uchun kanalimizga obuna bo'ling!**\n\n"
@@ -251,10 +208,10 @@ async def handle_media_download(message: types.Message):
         )
         return
 
-    await process_and_send_media(message, url, platform, icon, pref_quality)
+    await process_and_send_media(message, url, platform, icon, pref_quality, bot)
 
 @dp.callback_query(F.data.startswith("download_q:"))
-async def cb_download_quality(callback: types.CallbackQuery):
+async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
     parts = callback.data.split(":")
     url_hash = parts[1]
     quality = parts[2]
@@ -266,10 +223,10 @@ async def cb_download_quality(callback: types.CallbackQuery):
 
     platform, icon, _ = detect_platform_and_url(url)
     await callback.message.delete()
-    await process_and_send_media(callback.message, url, platform or "Media", icon or "📹", quality)
+    await process_and_send_media(callback.message, url, platform or "Media", icon or "📹", quality, bot)
     await callback.answer()
 
-async def process_and_send_media(message: types.Message, url: str, platform: str, icon: str, quality: str):
+async def process_and_send_media(message: types.Message, url: str, platform: str, icon: str, quality: str, bot_inst: Bot):
     status_msg = await message.answer(f"{icon} **{platform}** havolasi ishlanmoqda...")
     loop = asyncio.get_event_loop()
     
@@ -297,6 +254,8 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
         file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
         title = video_info.get("title", f"{platform} Video")
 
+        bot_info = await bot_inst.get_me()
+
         if quality == 'mp3' or file_path.endswith(".mp3"):
             await status_msg.edit_text("🎵 MP3 audio fayl tayyorlanmoqda...")
             mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
@@ -304,7 +263,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             audio = FSInputFile(mp3_file)
             await message.answer_audio(
                 audio,
-                caption=f"🎵 {title}\n\n🤖 @{(await bot.get_me()).username}",
+                caption=f"🎵 {title}\n\n🤖 @{bot_info.username}",
                 title=title
             )
             await record_download(message.from_user.id, url, platform, "MP3")
@@ -330,7 +289,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
 
             await message.answer_video(
                 video,
-                caption=f"{icon} **{title}**\n\n🤖 @{(await bot.get_me()).username}",
+                caption=f"{icon} **{title}**\n\n🤖 @{bot_info.username}",
                 width=width,
                 height=height,
                 duration=int(duration) if duration else None,
@@ -391,13 +350,38 @@ async def inline_search_handler(inline_query: types.InlineQuery):
     except Exception as e:
         logger.error(f"Inline search error: {e}")
 
+async def create_bot_instance() -> Bot:
+    proxy_url = os.getenv("TELEGRAM_PROXY")
+    bot_api_server = os.getenv("BOT_API_SERVER")
+    
+    use_local_api = False
+    if bot_api_server:
+        try:
+            async with aiohttp.ClientSession() as session:
+                url = f"{bot_api_server.rstrip('/')}/bot{BOT_TOKEN}/getMe"
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                    if resp.status in (200, 400, 401, 404):
+                        use_local_api = True
+        except Exception as e:
+            logger.warning(f"Local Bot API server check failed: {e}. Falling back to official api.telegram.org")
+
+    if use_local_api:
+        logger.info(f"Connected to Local Bot API Server: {bot_api_server}")
+        api = TelegramAPIServer.from_base(bot_api_server)
+        session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
+        return Bot(token=BOT_TOKEN, session=session)
+    else:
+        session = AiohttpSession(proxy=proxy_url) if proxy_url else None
+        return Bot(token=BOT_TOKEN, session=session) if session else Bot(token=BOT_TOKEN)
+
 async def main():
     logger.info("Initializing database...")
     await init_db()
     
     logger.info("Bot is starting...")
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    bot_instance = await create_bot_instance()
+    await bot_instance.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot_instance)
 
 if __name__ == "__main__":
     try:
