@@ -70,7 +70,6 @@ def get_ffmpeg_path():
 def get_video_info(url):
     """Получает информацию о видео без скачивания"""
     ydl_opts = {
-        'cookiefile': COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
         'noplaylist': True,
         'quiet': True,
         'ffmpeg_location': get_ffmpeg_path(),
