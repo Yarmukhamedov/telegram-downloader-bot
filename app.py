@@ -280,7 +280,6 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
         else:
             file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
             
-            # Check if file > 49 MB and compress if running on standard Telegram API
             is_local_api = getattr(bot_inst, "_is_local_api", False) or (hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local)
             file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
             
@@ -381,9 +380,10 @@ async def create_bot_instance() -> Bot:
                 async with aiohttp.ClientSession() as session:
                     url = f"{candidate.rstrip('/')}/bot{BOT_TOKEN}/getMe"
                     async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
-                        if resp.status in (200, 400, 401, 404):
-                            chosen_api_url = candidate
-                            break
+                        # Any HTTP status response means the port is OPEN and responding!
+                        chosen_api_url = candidate
+                        logger.info(f"✅ Local Bot API responded at '{candidate}' with HTTP status {resp.status}!")
+                        break
             except Exception as e:
                 pass
         if chosen_api_url:
