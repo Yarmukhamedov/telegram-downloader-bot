@@ -362,20 +362,22 @@ async def create_bot_instance() -> Bot:
     
     use_local_api = False
     if bot_api_server:
-        for attempt in range(1, 6):
+        logger.info(f"Connecting to Local Bot API '{bot_api_server}'...")
+        for attempt in range(1, 16):
             try:
                 async with aiohttp.ClientSession() as session:
                     url = f"{bot_api_server.rstrip('/')}/bot{BOT_TOKEN}/getMe"
                     async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
                         if resp.status in (200, 400, 401, 404):
                             use_local_api = True
+                            logger.info(f"✅ Local Bot API connected on attempt {attempt}!")
                             break
             except Exception as e:
-                logger.info(f"Connecting to Local Bot API '{bot_api_server}' (attempt {attempt}/5)...")
+                logger.info(f"Waiting for Local Bot API server... (attempt {attempt}/15): {e}")
                 await asyncio.sleep(1)
 
     if use_local_api:
-        logger.info(f"✅ Successfully connected to Local Bot API Server: {bot_api_server}")
+        logger.info(f"✅ Using Local Bot API Server: {bot_api_server}")
         api = TelegramAPIServer.from_base(bot_api_server)
         session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
         return Bot(token=BOT_TOKEN, session=session)
@@ -390,14 +392,14 @@ async def main():
     
     bot_instance = await create_bot_instance()
     try:
+        await bot_instance.delete_webhook(drop_pending_updates=True)
         bot_info = await bot_instance.get_me()
         logger.info(f"🤖 Connected Bot Username: @{bot_info.username} (ID: {bot_info.id})")
+        logger.info("🚀 Bot is starting polling...")
+        await dp.start_polling(bot_instance)
     except Exception as e:
-        logger.error(f"❌ Failed to fetch bot_info: {e}")
-
-    logger.info("Bot is starting polling...")
-    await bot_instance.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot_instance)
+        logger.error(f"❌ Error during bot polling startup: {e}")
+        raise e
 
 if __name__ == "__main__":
     while True:
