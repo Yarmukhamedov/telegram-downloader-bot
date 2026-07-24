@@ -281,7 +281,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
             
             # Check if file > 49 MB and compress if running on standard Telegram API
-            is_local_api = hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local
+            is_local_api = getattr(bot_inst, "_is_local_api", False) or (hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local)
             file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
             
             if not is_local_api and file_size_mb > 49.0:
@@ -368,9 +368,9 @@ async def inline_search_handler(inline_query: types.InlineQuery):
 
 async def create_bot_instance() -> Bot:
     proxy_url = os.getenv("TELEGRAM_PROXY")
-    bot_api_env = os.getenv("BOT_API_SERVER", "http://127.0.0.1:8081")
+    bot_api_env = os.getenv("BOT_API_SERVER", "http://telegram-bot-api:8081")
     
-    candidate_urls = [bot_api_env, "http://127.0.0.1:8081", "http://localhost:8081"]
+    candidate_urls = [bot_api_env, "http://telegram-bot-api:8081", "http://127.0.0.1:8081", "http://localhost:8081"]
 
     chosen_api_url = None
     logger.info("⏳ Connecting to Local Bot API Server (2GB upload mode)...")
@@ -384,22 +384,26 @@ async def create_bot_instance() -> Bot:
                         if resp.status in (200, 400, 401, 404):
                             chosen_api_url = candidate
                             break
-            except Exception:
+            except Exception as e:
                 pass
         if chosen_api_url:
             break
-        logger.info(f"⏳ Waiting for Local Bot API server to initialize (attempt {attempt}/30)...")
+        logger.info(f"⏳ Waiting for Local Bot API server at {bot_api_env} (attempt {attempt}/30)...")
         await asyncio.sleep(1)
 
     if chosen_api_url:
         logger.info(f"🚀 ✅ SUCCESS: Connected to Local Bot API Server at: {chosen_api_url} (2GB Limit Active!)")
         api = TelegramAPIServer.from_base(chosen_api_url, is_local=True)
         session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
-        return Bot(token=BOT_TOKEN, session=session)
+        bot_inst = Bot(token=BOT_TOKEN, session=session)
+        bot_inst._is_local_api = True
+        return bot_inst
     else:
-        logger.warning("⚠️ Local Bot API not reachable after 30 seconds. Falling back to default api.telegram.org (50MB Limit)")
+        logger.warning("⚠️ Local Bot API not reachable. Falling back to default api.telegram.org (50MB Limit)")
         session = AiohttpSession(proxy=proxy_url) if proxy_url else None
-        return Bot(token=BOT_TOKEN, session=session) if session else Bot(token=BOT_TOKEN)
+        bot_inst = Bot(token=BOT_TOKEN, session=session) if session else Bot(token=BOT_TOKEN)
+        bot_inst._is_local_api = False
+        return bot_inst
 
 async def main():
     logger.info("Initializing database...")
