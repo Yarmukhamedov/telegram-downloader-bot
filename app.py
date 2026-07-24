@@ -45,7 +45,10 @@ LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
 def get_ffmpeg_path():
     if os.path.exists(LOCAL_FFMPEG):
         return LOCAL_FFMPEG
-    return shutil.which("ffmpeg") or "ffmpeg"
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if ffmpeg_bin:
+        return ffmpeg_bin
+    return "ffmpeg"
 
 def get_ffprobe_path():
     ffmpeg_p = get_ffmpeg_path()
@@ -137,39 +140,23 @@ async def progress_hook(d, message: types.Message, last_update_time):
             except Exception:
                 pass
 
-def get_video_info(url):
-    ydl_opts = {
-        "noplaylist": True,
-        "quiet": True,
-        "ffmpeg_location": get_ffmpeg_path(),
-        "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["ios", "android", "mweb", "web"],
-            }
-        },
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(url, download=False)
-
-def download_video(url, message: types.Message, loop):
-    last_update_time = [loop.time()]
+def get_base_ydl_opts():
     ffmpeg_path = get_ffmpeg_path()
+    
+    extractor_args = {
+        "youtube": {
+            "player_client": ["web", "mweb", "android", "ios"],
+            "po_token": ["web+http://127.0.0.1:4416/gvis"],
+        }
+    }
 
     ydl_opts = {
         "format": "bestvideo+bestaudio/best",
-        "outtmpl": "downloads/%(id)s.%(ext)s",
-        "logger": MyLogger(),
-        "progress_hooks": [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
         "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["ios", "android", "mweb", "web"],
-            }
-        },
+        "extractor_args": extractor_args,
         "http_headers": {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         },
@@ -177,6 +164,25 @@ def download_video(url, message: types.Message, loop):
             "ffmpeg": ["-movflags", "+faststart"]
         }
     }
+
+    if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+        logger.info(f"Using cookies from {COOKIES_PATH}")
+        ydl_opts["cookiefile"] = COOKIES_PATH
+
+    return ydl_opts
+
+def get_video_info(url):
+    ydl_opts = get_base_ydl_opts()
+    ydl_opts["quiet"] = True
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        return ydl.extract_info(url, download=False)
+
+def download_video(url, message: types.Message, loop):
+    last_update_time = [loop.time()]
+    ydl_opts = get_base_ydl_opts()
+    ydl_opts["logger"] = MyLogger()
+    ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
+    ydl_opts["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)]
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -216,7 +222,7 @@ async def handle_text_message(message: types.Message):
     
     try:
         os.makedirs("downloads", exist_ok=True)
-        await status_msg.edit_text("⏳ Начинаю скачивание в 100% оригинальном качестве (без сжатия)...")
+        await status_msg.edit_text("⏳ Начинаю скачивание в 100% оригинальном качестве (HD/4K)...")
         
         file_path, video_info = await loop.run_in_executor(None, download_video, url, status_msg, loop)
 
