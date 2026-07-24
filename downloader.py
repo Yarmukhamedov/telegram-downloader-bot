@@ -65,6 +65,7 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
     else:
         format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b"
 
+    node_path = shutil.which("node")
     ydl_opts = {
         "format": format_spec,
         "format_sort": ["vcodec:h264", "res", "ext:mp4:m4a"],
@@ -79,6 +80,8 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
             "ffmpeg": ["-movflags", "+faststart"]
         }
     }
+    if node_path:
+        ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
 
     if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
         ydl_opts["cookiefile"] = COOKIES_PATH
