@@ -11,12 +11,27 @@ from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import FSInputFile
+from aiogram.types import FSInputFile, InlineQueryResultArticle, InputTextMessageContent
 from aiogram.client.session.aiohttp import AiohttpSession
 
+from database import (
+    init_db, get_or_create_user, update_user_quality, record_download,
+    check_daily_limit, get_setting, get_admin_stats
+)
+from downloader import (
+    detect_platform_and_url, download_media, get_video_metadata,
+    ensure_h264_codec, convert_to_mp3, create_video_thumbnail
+)
+from keyboards import (
+    get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
+    get_quality_selector_keyboard
+)
+from admin import admin_router, get_admin_ids
+
+# Logging setup
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -27,318 +42,342 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN is not set!")
     sys.exit(1)
 
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-COOKIES_PATH = "cookies.txt"
+dp.include_router(admin_router)
 
-class MyLogger:
-    def debug(self, msg):
-        if any(x in msg for x in ["[pot]", "Signature", "n-parameter", "EJS", "ejs"]):
-            logger.info(f"DEBUG: {msg}")
-    def warning(self, msg):
-        logger.warning(msg)
-    def error(self, msg):
-        logger.error(msg)
+# Store transient URLs for inline quality selector
+url_cache = {}
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
+async def check_channel_subscription(user_id: int) -> tuple[bool, str, str]:
+    """
+    Returns (is_subscribed, channel_id, channel_link)
+    """
+    admin_ids = get_admin_ids()
+    if user_id in admin_ids:
+        return True, "", ""
 
-def get_ffmpeg_path():
-    if os.path.exists(LOCAL_FFMPEG):
-        return LOCAL_FFMPEG
-    ffmpeg_bin = shutil.which("ffmpeg")
-    if ffmpeg_bin:
-        return ffmpeg_bin
-    return "ffmpeg"
+    ch_id = await get_setting("force_channel_id", os.getenv("REQUIRED_CHANNEL_ID", ""))
+    ch_link = await get_setting("force_channel_link", os.getenv("REQUIRED_CHANNEL_LINK", "https://t.me"))
 
-def get_ffprobe_path():
-    ffmpeg_p = get_ffmpeg_path()
-    if ffmpeg_p and "ffmpeg" in ffmpeg_p:
-        candidate = ffmpeg_p.replace("ffmpeg", "ffprobe")
-        if os.path.exists(candidate):
-            return candidate
-    return shutil.which("ffprobe") or "ffprobe"
+    if not ch_id or ch_id == "off":
+        return True, "", ""
 
-def get_video_metadata(file_path: str):
-    ffprobe_path = get_ffprobe_path()
-    cmd = [
-        ffprobe_path,
-        "-v", "quiet",
-        "-print_format", "json",
-        "-show_streams",
-        "-show_format",
-        file_path
-    ]
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-        data = json.loads(result.stdout)
-        
-        width = None
-        height = None
-        duration = None
-        
-        for stream in data.get("streams", []):
-            if stream.get("codec_type") == "video":
-                width = int(stream.get("width", 0)) or None
-                height = int(stream.get("height", 0)) or None
-                
-                rotation = 0
-                for side_data in stream.get("side_data_list", []):
-                    if "rotation" in side_data:
-                        rotation = abs(int(side_data["rotation"]))
-                if "tags" in stream and "rotate" in stream.get("tags", {}):
-                    try:
-                        rotation = abs(int(stream["tags"]["rotate"]))
-                    except ValueError:
-                        pass
-                        
-                if rotation in (90, 270) and width and height:
-                    width, height = height, width
-                break
-                
-        if "format" in data and "duration" in data["format"]:
-            try:
-                duration = int(float(data["format"]["duration"]))
-            except (ValueError, TypeError):
-                pass
-                
-        return width, height, duration
+        member = await bot.get_chat_member(chat_id=ch_id, user_id=user_id)
+        if member.status in ["creator", "administrator", "member"]:
+            return True, ch_id, ch_link
     except Exception as e:
-        logger.error(f"Metadata error via ffprobe: {e}")
-        return None, None, None
+        logger.warning(f"Failed to check channel subscription for user {user_id}: {e}")
+        return True, "", "" # Fail open if bot is not admin in channel
 
-def ensure_h264_codec(file_path: str) -> str:
-    ffprobe_path = get_ffprobe_path()
-    cmd_probe = [
-        ffprobe_path,
-        "-v", "quiet",
-        "-print_format", "json",
-        "-show_streams",
-        file_path
-    ]
-    try:
-        res = subprocess.run(cmd_probe, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-        data = json.loads(res.stdout)
-        codec_name = ""
-        for stream in data.get("streams", []):
-            if stream.get("codec_type") == "video":
-                codec_name = stream.get("codec_name", "").lower()
-                break
-                
-        if "h264" in codec_name or "avc" in codec_name:
-            logger.info(f"Video codec is already {codec_name}. Native Telegram playback supported.")
-            return file_path
-            
-        logger.info(f"Video codec is {codec_name} (AV1/VP9). Remuxing to H.264 for smooth Telegram playback...")
-        converted_path = os.path.splitext(file_path)[0] + "_h264.mp4"
-        ffmpeg_path = get_ffmpeg_path()
-        cmd_convert = [
-            ffmpeg_path,
-            "-y",
-            "-i", file_path,
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-crf", "18",
-            "-c:a", "copy",
-            "-movflags", "+faststart",
-            converted_path
-        ]
-        subprocess.run(cmd_convert, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        if os.path.exists(converted_path) and os.path.getsize(converted_path) > 0:
-            os.remove(file_path)
-            return converted_path
-    except Exception as e:
-        logger.error(f"Error ensuring H264 codec: {e}")
-        
-    return file_path
-
-def create_video_thumbnail(file_path: str, output_thumb_path: str):
-    ffmpeg_path = get_ffmpeg_path()
-    cmd = [
-        ffmpeg_path,
-        "-y",
-        "-ss", "00:00:01",
-        "-i", file_path,
-        "-vframes", "1",
-        "-q:v", "2",
-        output_thumb_path
-    ]
-    try:
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        if os.path.exists(output_thumb_path) and os.path.getsize(output_thumb_path) > 0:
-            return output_thumb_path
-    except Exception as e:
-        logger.error(f"Thumbnail error: {e}")
-    return None
-
-async def progress_hook(d, message: types.Message, last_update_time):
-    if d["status"] == "downloading":
-        p = d.get("_percent_str", "0%")
-        speed = d.get("_speed_str", "N/A")
-        eta = d.get("_eta_str", "N/A")
-        
-        current_time = asyncio.get_event_loop().time()
-        if current_time - last_update_time[0] > 3:
-            try:
-                text = f"⏳ Скачивание: {p}\n🚀 Скорость: {speed}\n⏱ ETA: {eta}"
-                await message.edit_text(text)
-                last_update_time[0] = current_time
-            except Exception:
-                pass
-
-def get_base_ydl_opts(use_cookies=True):
-    ffmpeg_path = get_ffmpeg_path()
-    
-    ydl_opts = {
-        "format": "bestvideo+bestaudio/bestvideo/best/bv*+ba/b",
-        "format_sort": ["vcodec:h264", "res", "ext:mp4:m4a"],
-        "merge_output_format": "mp4",
-        "noplaylist": True,
-        "ffmpeg_location": ffmpeg_path,
-        "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
-        "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        },
-        "postprocessor_args": {
-            "ffmpeg": ["-movflags", "+faststart"]
-        }
-    }
-
-    if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
-        logger.info(f"Using cookies from {COOKIES_PATH}")
-        ydl_opts["cookiefile"] = COOKIES_PATH
-
-    return ydl_opts
-
-def get_video_info(url):
-    ydl_opts = get_base_ydl_opts(use_cookies=True)
-    ydl_opts["quiet"] = True
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            return ydl.extract_info(url, download=False)
-    except Exception:
-        ydl_opts_nocookies = get_base_ydl_opts(use_cookies=False)
-        ydl_opts_nocookies["quiet"] = True
-        with yt_dlp.YoutubeDL(ydl_opts_nocookies) as ydl:
-            return ydl.extract_info(url, download=False)
-
-def download_video(url, message: types.Message, loop):
-    last_update_time = [loop.time()]
-    
-    try:
-        ydl_opts = get_base_ydl_opts(use_cookies=True)
-        ydl_opts["logger"] = MyLogger()
-        ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
-        ydl_opts["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)]
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            mp4_path = os.path.splitext(filename)[0] + ".mp4"
-            final_file = mp4_path if os.path.exists(mp4_path) else filename
-            return final_file, info
-    except Exception as e:
-        logger.warning(f"Primary download failed: {e}. Trying fallback without cookies...")
-        
-        ydl_opts_fallback = get_base_ydl_opts(use_cookies=False)
-        ydl_opts_fallback["logger"] = MyLogger()
-        ydl_opts_fallback["outtmpl"] = "downloads/%(id)s.%(ext)s"
-        ydl_opts_fallback["progress_hooks"] = [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)]
-
-        with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            mp4_path = os.path.splitext(filename)[0] + ".mp4"
-            final_file = mp4_path if os.path.exists(mp4_path) else filename
-            return final_file, info
-
-def extract_url(text: str) -> str | None:
-    if not text:
-        return None
-    match = re.search(r"(https?://[^\s]+)", text)
-    if match:
-        return match.group(1)
-    if "youtu" in text:
-        match = re.search(r"((?:youtu\.be/|youtube\.com/)[^\s]+)", text)
-        if match:
-            return "https://" + match.group(1)
-    return None
+    return False, ch_id, ch_link
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    logger.info(f"Received /start from user {message.from_user.id}")
-    await message.answer("👋 Привет! Я скачиваю видео из YouTube в максимальном оригинальном качестве (HD/4K).\nПросто пришли мне ссылку на видео!")
+    user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
+    admin_ids = get_admin_ids()
+    is_admin = message.from_user.id in admin_ids
+
+    welcome_text = (
+        f"👋 **Xush kelibsiz, {message.from_user.first_name}!**\n\n"
+        f"Men YouTube, TikTok, Instagram, Pinterest va Twitter/X platformalaridan "
+        f"videolarni 100% original hajmda hamda yuqori sifatda yuklab beruvchi botman! 🚀\n\n"
+        f"⚡️ Shunchaki video havolasini menga yuboring!\n"
+        f"⚙️ Sukut bo'yicha yuklash sifatini **⚙️ Sozlamalar** bo'limida o'zgartirishingiz mumkin."
+    )
+    await message.answer(welcome_text, reply_markup=get_main_keyboard(is_admin), parse_mode="Markdown")
+
+@dp.message(Command("settings"))
+@dp.message(F.text == "⚙️ Sozlamalar")
+async def cmd_settings(message: types.Message):
+    user = await get_or_create_user(message.from_user.id)
+    quality = user['preferred_quality']
+    
+    text = (
+        "⚙️ **Yuklash Sozlamalari**\n\n"
+        "Videolar qaysi sifatda yuklab olinishini tanlang.\n"
+        "Tanlangan sifat barcha kelgusi yuklashlaringizga avtomatik qo'llaniladi:"
+    )
+    await message.answer(text, reply_markup=get_settings_keyboard(quality), parse_mode="Markdown")
+
+@dp.callback_query(F.data.startswith("set_quality:"))
+async def cb_set_quality(callback: types.CallbackQuery):
+    quality = callback.data.split(":")[1]
+    await update_user_quality(callback.from_user.id, quality)
+    
+    q_labels = {
+        'best': "🎬 Eng yuqori (1080p / 4K)",
+        '720p': "📺 O'rtacha HD (720p)",
+        '480p': "📱 Tejamkor (480p)",
+        'mp3': "🎵 Faqat MP3 Audio",
+        'ask': "❓ Har safar so'rash"
+    }
+
+    selected_label = q_labels.get(quality, quality)
+    await callback.message.edit_reply_markup(reply_markup=get_settings_keyboard(quality))
+    await callback.answer(f"✅ Sozlama saqlandi: {selected_label}", show_alert=True)
+
+@dp.message(F.text == "👤 Profil / Tarif")
+async def cmd_profile(message: types.Message):
+    user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
+    
+    status_str = "⭐ Premium (Cheksiz)" if user['is_premium'] else "🆓 Bepul (Free)"
+    daily_limit = "Cheksiz" if user['is_premium'] else "15 ta / kun"
+    
+    q_map = {
+        'best': "🎬 Eng yuqori (1080p / 4K)",
+        '720p': "📺 O'rtacha HD (720p)",
+        '480p': "📱 Tejamkor (480p)",
+        'mp3': "🎵 Faqat MP3 Audio",
+        'ask': "❓ Har safar so'rash"
+    }
+    pref_q = q_map.get(user['preferred_quality'], "🎬 Eng yuqori")
+
+    text = (
+        "👤 **Sizning Profilingiz**\n\n"
+        f"🆔 **ID:** `{user['user_id']}`\n"
+        f"👤 **Ism:** {user['full_name']}\n"
+        f"📊 **Tarif:** {status_str}\n"
+        f"📥 **Bugungi yuklashlar:** {user['daily_downloads']} / {daily_limit}\n"
+        f"⚙️ **Tanlangan sifat:** {pref_q}\n"
+    )
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(F.text == "ℹ️ Yordam")
+async def cmd_help(message: types.Message):
+    text = (
+        "ℹ️ **Botdan foydalanish yordami**\n\n"
+        "1. **Qo'llab-quvvatlanadigan platformalar:**\n"
+        "   • 🎬 YouTube (Videolar va Shorts)\n"
+        "   • 🎵 TikTok (Suv belgisiz - No Watermark)\n"
+        "   • 📸 Instagram (Reels va Videolar)\n"
+        "   • 📌 Pinterest (Videolar va GIF)\n"
+        "   • 🐦 Twitter / X (Videolar)\n\n"
+        "2. **Qanday yuklanadi?**\n"
+        "   Shunchaki istalgan video havolasini botga yuboring!\n\n"
+        "3. **Sifatni o'zgartirish:**\n"
+        "   **⚙️ Sozlamalar** tugmasi orqali MP3 audio yoki boshqa sifatlarni tanlashingiz mumkin."
+    )
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.callback_query(F.data == "check_subscription")
+async def cb_check_sub(callback: types.CallbackQuery):
+    is_sub, ch_id, ch_link = await check_channel_subscription(callback.from_user.id)
+    if is_sub:
+        await callback.message.edit_text("✅ Rahmat! Obuna tasdiqlandi. Endi botdan to'liq foydalanishingiz mumkin! 🚀")
+        await callback.answer()
+    else:
+        await callback.answer("❌ Siz hali kanalga obuna bo'lmadingiz!", show_alert=True)
 
 @dp.message(F.text)
-async def handle_text_message(message: types.Message):
-    url = extract_url(message.text)
-    logger.info(f"Received message from user {message.from_user.id}: {message.text}")
-    
-    if not url:
-        await message.answer("ℹ️ Пожалуйста, отправьте мне ссылку на видео из YouTube (например: https://youtu.be/...)")
+async def handle_media_download(message: types.Message):
+    # Ignore command buttons
+    if message.text in ["⚙️ Sozlamalar", "👤 Profil / Tarif", "ℹ️ Yordam", "🛠 Admin Panel"]:
         return
 
-    status_msg = await message.answer("🔍 Проверяю ссылку...")
+    # Check Channel Subscription
+    is_sub, ch_id, ch_link = await check_channel_subscription(message.from_user.id)
+    if not is_sub:
+        text = (
+            "⚠️ **Botdan foydalanish uchun kanalimizga obuna bo'ling!**\n\n"
+            "Obuna bo'lgach, **✅ Obunani tekshirish** tugmasini bosing:"
+        )
+        await message.answer(text, reply_markup=get_force_sub_keyboard(ch_link), parse_mode="Markdown")
+        return
+
+    # Detect platform and extract URL
+    platform, icon, url = detect_platform_and_url(message.text)
+    if not url:
+        await message.answer("ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!")
+        return
+
+    # Check Daily Limit
+    can_download, current_usage = await check_daily_limit(message.from_user.id, free_limit=15)
+    if not can_download:
+        await message.answer(
+            "⚠️ **Kunlik tekin yuklab olish limitiga yetdingiz! (15/15)**\n\n"
+            "Cheksiz yuklab olish uchun **Premium** tarifiga o'ting yoki ertagacha kuting. 😊",
+            parse_mode="Markdown"
+        )
+        return
+
+    user = await get_or_create_user(message.from_user.id)
+    pref_quality = user['preferred_quality']
+
+    # If quality is set to 'ask', prompt user with inline keyboard
+    if pref_quality == 'ask':
+        import hashlib
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:10]
+        url_cache[url_hash] = url
+        
+        await message.answer(
+            f"{icon} **{platform} havolasi qabul qilindi!**\nSifat yoki formatni tanlang:",
+            reply_markup=get_quality_selector_keyboard(url),
+            parse_mode="Markdown"
+        )
+        return
+
+    # Direct auto-download using user's saved quality preference
+    await process_and_send_media(message, url, platform, icon, pref_quality)
+
+@dp.callback_query(F.data.startswith("download_q:"))
+async def cb_download_quality(callback: types.CallbackQuery):
+    parts = callback.data.split(":")
+    url_hash = parts[1]
+    quality = parts[2]
+
+    url = url_cache.get(url_hash)
+    if not url:
+        await callback.answer("❌ Havola muddati o'tdi. Iltimos, havolani qayta yuboring.", show_alert=True)
+        return
+
+    platform, icon, _ = detect_platform_and_url(url)
+    await callback.message.delete()
+    await process_and_send_media(callback.message, url, platform or "Media", icon or "📹", quality)
+    await callback.answer()
+
+async def process_and_send_media(message: types.Message, url: str, platform: str, icon: str, quality: str):
+    status_msg = await message.answer(f"{icon} **{platform}** havolasi ishlanmoqda...")
     loop = asyncio.get_event_loop()
     
+    last_update_time = [loop.time()]
+
+    async def progress_hook(d):
+        if d['status'] == 'downloading':
+            p = d.get('_percent_str', '0%')
+            speed = d.get('_speed_str', 'N/A')
+            eta = d.get('_eta_str', 'N/A')
+            
+            current_time = loop.time()
+            if current_time - last_update_time[0] > 3:
+                try:
+                    text = f"⏳ **{platform}** yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}"
+                    await status_msg.edit_text(text, parse_mode="Markdown")
+                    last_update_time[0] = current_time
+                except Exception:
+                    pass
+
     try:
         os.makedirs("downloads", exist_ok=True)
-        await status_msg.edit_text("⏳ Начинаю скачивание в 100% оригинальном качестве (HD/4K)...")
+        await status_msg.edit_text(f"⏳ **{platform}** dan yuklab olinmoqda...")
         
-        file_path, video_info = await loop.run_in_executor(None, download_video, url, status_msg, loop)
+        file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
+        title = video_info.get("title", f"{platform} Video")
 
-        file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
-
-        await status_msg.edit_text("✅ Готово! Подготавливаю и отправляю видео...")
-        
-        width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
-        
-        if not width or not height:
-            width = video_info.get("width")
-            height = video_info.get("height")
-        if not duration:
-            duration = video_info.get("duration")
+        if quality == 'mp3' or file_path.endswith(".mp3"):
+            # MP3 Audio Delivery
+            await status_msg.edit_text("🎵 MP3 audio fayl tayyorlanmoqda...")
+            mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
             
-        title = video_info.get("title", "Видео")
+            audio = FSInputFile(mp3_file)
+            await message.answer_audio(
+                audio,
+                caption=f"🎵 {title}\n\n🤖 @{(await bot.get_me()).username}",
+                title=title
+            )
+            await record_download(message.from_user.id, url, platform, "MP3")
+            if os.path.exists(mp3_file):
+                os.remove(mp3_file)
 
-        thumb_file_path = os.path.splitext(file_path)[0] + "_thumb.jpg"
-        thumb_result = await loop.run_in_executor(None, create_video_thumbnail, file_path, thumb_file_path)
+        else:
+            # Video Delivery with H.264 smooth playback guarantee
+            file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
+            
+            await status_msg.edit_text("✅ Tayyor! Telegram'ga yuborilmoqda...")
+            
+            width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
+            if not width or not height:
+                width = video_info.get("width")
+                height = video_info.get("height")
+            if not duration:
+                duration = video_info.get("duration")
 
-        video = FSInputFile(file_path)
-        thumbnail = FSInputFile(thumb_result) if thumb_result else None
+            thumb_file_path = os.path.splitext(file_path)[0] + "_thumb.jpg"
+            thumb_result = await loop.run_in_executor(None, create_video_thumbnail, file_path, thumb_file_path)
 
-        await message.answer_video(
-            video,
-            caption=f"🎬 {title}",
-            width=width,
-            height=height,
-            duration=int(duration) if duration else None,
-            thumbnail=thumbnail,
-            supports_streaming=True
-        )
+            video = FSInputFile(file_path)
+            thumbnail = FSInputFile(thumb_result) if thumb_result else None
+
+            await message.answer_video(
+                video,
+                caption=f"{icon} **{title}**\n\n🤖 @{(await bot.get_me()).username}",
+                width=width,
+                height=height,
+                duration=int(duration) if duration else None,
+                thumbnail=thumbnail,
+                supports_streaming=True,
+                parse_mode="Markdown"
+            )
+            await record_download(message.from_user.id, url, platform, quality)
+            
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            if thumb_result and os.path.exists(thumb_result):
+                os.remove(thumb_result)
+
         await status_msg.delete()
-        
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        if thumb_result and os.path.exists(thumb_result):
-            os.remove(thumb_result)
-            
+
     except Exception as e:
-        logger.error(f"Error processing URL {url}: {e}")
-        await status_msg.edit_text(f"❌ Произошла ошибка при скачивании: {str(e)}")
+        logger.error(f"Error downloading {url}: {e}")
+        await status_msg.edit_text(f"❌ Yuklab olishda xatolik yuz berdi: {str(e)}")
+
+@dp.inline_query()
+async def inline_search_handler(inline_query: types.InlineQuery):
+    query = inline_query.query.strip()
+    if not query:
+        return
+
+    ydl_opts = {
+        "quiet": True,
+        "extract_flat": True,
+        "noplaylist": True,
+        "max_downloads": 5
+    }
+
+    results = []
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            search_info = ydl.extract_info(f"ytsearch5:{query}", download=False)
+            entries = search_info.get("entries", [])
+            
+            for idx, entry in enumerate(entries):
+                v_title = entry.get("title", "YouTube Video")
+                v_url = entry.get("url") or f"https://www.youtube.com/watch?v={entry.get('id')}"
+                v_duration = entry.get("duration")
+                
+                dur_str = f" ({int(v_duration)} sec)" if v_duration else ""
+                
+                results.append(
+                    InlineQueryResultArticle(
+                        id=str(idx),
+                        title=f"🎬 {v_title}",
+                        description=f"YouTube Video{dur_str}\n{v_url}",
+                        input_message_content=InputTextMessageContent(
+                            message_text=v_url
+                        )
+                    )
+                )
+        await inline_query.answer(results, cache_time=300)
+    except Exception as e:
+        logger.error(f"Inline search error: {e}")
 
 async def main():
+    logger.info("Initializing database...")
+    await init_db()
+    
     logger.info("Bot is starting...")
     proxy_url = os.getenv("TELEGRAM_PROXY")
     
     if proxy_url:
         logger.info(f"Using Telegram Proxy: {proxy_url}")
         session = AiohttpSession(proxy=proxy_url)
-        bot = Bot(token=BOT_TOKEN, session=session)
+        bot_instance = Bot(token=BOT_TOKEN, session=session)
+        await bot_instance.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot_instance)
     else:
-        bot = Bot(token=BOT_TOKEN)
-        
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
 
 if __name__ == "__main__":
     try:
