@@ -1,26 +1,25 @@
 import os
+import re
+import sys
+import json
+import shutil
 import asyncio
 import logging
-import yt_dlp
-import sys
 import subprocess
+import yt_dlp
+from dotenv import load_dotenv
+
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import FSInputFile
-from dotenv import load_dotenv
+from aiogram.client.session.aiohttp import AiohttpSession
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-import socket
-from aiohttp import TCPConnector
-from aiogram.client.session.aiohttp import AiohttpSession
-
-# Загрузка переменных окружения
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -29,7 +28,6 @@ if not BOT_TOKEN:
     sys.exit(1)
 
 dp = Dispatcher()
-
 COOKIES_PATH = "cookies.txt"
 
 class MyLogger:
@@ -41,11 +39,129 @@ class MyLogger:
     def error(self, msg):
         logger.error(msg)
 
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
+
+def get_ffmpeg_path():
+    if os.path.exists(LOCAL_FFMPEG):
+        return LOCAL_FFMPEG
+    return shutil.which("ffmpeg") or "ffmpeg"
+
+def get_ffprobe_path():
+    ffmpeg_p = get_ffmpeg_path()
+    if ffmpeg_p and "ffmpeg" in ffmpeg_p:
+        candidate = ffmpeg_p.replace("ffmpeg", "ffprobe")
+        if os.path.exists(candidate):
+            return candidate
+    return shutil.which("ffprobe") or "ffprobe"
+
+def get_video_metadata(file_path: str):
+    ffprobe_path = get_ffprobe_path()
+    cmd = [
+        ffprobe_path,
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_streams",
+        "-show_format",
+        file_path
+    ]
+    try:
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        data = json.loads(result.stdout)
+        
+        width = None
+        height = None
+        duration = None
+        
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                width = int(stream.get("width", 0)) or None
+                height = int(stream.get("height", 0)) or None
+                
+                rotation = 0
+                for side_data in stream.get("side_data_list", []):
+                    if "rotation" in side_data:
+                        rotation = abs(int(side_data["rotation"]))
+                if "tags" in stream and "rotate" in stream.get("tags", {}):
+                    try:
+                        rotation = abs(int(stream["tags"]["rotate"]))
+                    except ValueError:
+                        pass
+                        
+                if rotation in (90, 270) and width and height:
+                    width, height = height, width
+                break
+                
+        if "format" in data and "duration" in data["format"]:
+            try:
+                duration = int(float(data["format"]["duration"]))
+            except (ValueError, TypeError):
+                pass
+                
+        return width, height, duration
+    except Exception as e:
+        logger.error(f"Metadata error via ffprobe: {e}")
+        return None, None, None
+
+def create_video_thumbnail(file_path: str, output_thumb_path: str):
+    ffmpeg_path = get_ffmpeg_path()
+    cmd = [
+        ffmpeg_path,
+        "-y",
+        "-ss", "00:00:01",
+        "-i", file_path,
+        "-vframes", "1",
+        "-q:v", "2",
+        output_thumb_path
+    ]
+    try:
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        if os.path.exists(output_thumb_path) and os.path.getsize(output_thumb_path) > 0:
+            return output_thumb_path
+    except Exception as e:
+        logger.error(f"Thumbnail error: {e}")
+    return None
+
+def compress_video_high_quality(file_path: str, target_max_mb: float = 49.0) -> str:
+    current_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+    if current_size_mb <= target_max_mb:
+        return file_path
+
+    compressed_path = os.path.splitext(file_path)[0] + "_compressed.mp4"
+    logger.info(f"File size {current_size_mb:.1f}MB exceeds {target_max_mb}MB. Compressing maintaining high quality...")
+    
+    ffmpeg_path = get_ffmpeg_path()
+    cmd = [
+        ffmpeg_path,
+        "-y",
+        "-i", file_path,
+        "-c:v", "libx264",
+        "-crf", "22",
+        "-preset", "medium",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        compressed_path
+    ]
+    try:
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        if os.path.exists(compressed_path) and os.path.getsize(compressed_path) <= 50 * 1024 * 1024:
+            os.remove(file_path)
+            return compressed_path
+        if os.path.exists(compressed_path):
+            os.remove(compressed_path)
+    except Exception as e:
+        logger.error(f"Compression error: {e}")
+        if os.path.exists(compressed_path):
+            os.remove(compressed_path)
+            
+    return file_path
+
 async def progress_hook(d, message: types.Message, last_update_time):
-    if d['status'] == 'downloading':
-        p = d.get('_percent_str', '0%')
-        speed = d.get('_speed_str', 'N/A')
-        eta = d.get('_eta_str', 'N/A')
+    if d["status"] == "downloading":
+        p = d.get("_percent_str", "0%")
+        speed = d.get("_speed_str", "N/A")
+        eta = d.get("_eta_str", "N/A")
         
         current_time = asyncio.get_event_loop().time()
         if current_time - last_update_time[0] > 3:
@@ -56,27 +172,15 @@ async def progress_hook(d, message: types.Message, last_update_time):
             except Exception:
                 pass
 
-# Путь к локальному FFmpeg (для Alwaysdata)
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
-
-import shutil
-
-def get_ffmpeg_path():
-    if os.path.exists(LOCAL_FFMPEG):
-        return LOCAL_FFMPEG
-    return shutil.which("ffmpeg") or "ffmpeg"
-
 def get_video_info(url):
-    """Получает информацию о видео без скачивания"""
     ydl_opts = {
-        'noplaylist': True,
-        'quiet': True,
-        'ffmpeg_location': get_ffmpeg_path(),
-        'cachedir': os.path.join(PROJECT_ROOT, '.cache'),
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'android', 'mweb', 'web'],
+        "noplaylist": True,
+        "quiet": True,
+        "ffmpeg_location": get_ffmpeg_path(),
+        "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["ios", "android", "mweb", "web"],
             }
         },
     }
@@ -88,55 +192,50 @@ def download_video(url, message: types.Message, loop):
     ffmpeg_path = get_ffmpeg_path()
 
     ydl_opts = {
-        'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
-        'outtmpl': 'downloads/%(id)s.%(ext)s',
-        'logger': MyLogger(),
-        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
-        'merge_output_format': 'mp4',
-        'noplaylist': True,
-        'ffmpeg_location': ffmpeg_path,
-        'cachedir': os.path.join(PROJECT_ROOT, '.cache'),
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'android', 'mweb', 'web'],
+        "format": "bestvideo+bestaudio/best",
+        "outtmpl": "downloads/%(id)s.%(ext)s",
+        "logger": MyLogger(),
+        "progress_hooks": [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
+        "merge_output_format": "mp4",
+        "noplaylist": True,
+        "ffmpeg_location": ffmpeg_path,
+        "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["ios", "android", "mweb", "web"],
             }
         },
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         },
-        'postprocessors': [{
-            'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4',
-        }],
+        "postprocessor_args": {
+            "ffmpeg": ["-movflags", "+faststart"]
+        }
     }
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info)
-        mp4_path = os.path.splitext(filename)[0] + '.mp4'
-        if os.path.exists(mp4_path):
-            return mp4_path
-        return filename
-
-import re
+        mp4_path = os.path.splitext(filename)[0] + ".mp4"
+        final_file = mp4_path if os.path.exists(mp4_path) else filename
+        return final_file, info
 
 def extract_url(text: str) -> str | None:
-    """Извлекает первую ссылку из текста"""
     if not text:
         return None
-    match = re.search(r'(https?://[^\s]+)', text)
+    match = re.search(r"(https?://[^\s]+)", text)
     if match:
         return match.group(1)
-    if 'youtu' in text:
-        # Для коротких ссылок без http
-        match = re.search(r'((?:youtu\.be/|youtube\.com/)[^\s]+)', text)
+    if "youtu" in text:
+        match = re.search(r"((?:youtu\.be/|youtube\.com/)[^\s]+)", text)
         if match:
-            return 'https://' + match.group(1)
+            return "https://" + match.group(1)
     return None
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     logger.info(f"Received /start from user {message.from_user.id}")
-    await message.answer("👋 Привет! Я скачиваю видео из YouTube в лучшем качестве (до 50 МБ).\nПросто пришли мне ссылку на видео!")
+    await message.answer("👋 Привет! Я скачиваю видео из YouTube в максимальном оригинальном качестве (сохраняя точные пропорции и размеры).\nПросто пришли мне ссылку на видео!")
 
 @dp.message(F.text)
 async def handle_text_message(message: types.Message):
@@ -147,41 +246,56 @@ async def handle_text_message(message: types.Message):
         await message.answer("ℹ️ Пожалуйста, отправьте мне ссылку на видео из YouTube (например: https://youtu.be/...)")
         return
 
-    status_msg = await message.answer("🔍 Проверяю размер файла...")
+    status_msg = await message.answer("🔍 Проверяю ссылку...")
     loop = asyncio.get_event_loop()
     
     try:
-        info = await loop.run_in_executor(None, get_video_info, url)
-        filesize = info.get('filesize') or info.get('filesize_approx')
-        
-        if filesize and filesize > 50 * 1024 * 1024:
-            size_mb = round(filesize / (1024 * 1024), 1)
-            await status_msg.edit_text(
-                f"⚠️ К сожалению, это видео весит около {size_mb} МБ.\n\n"
-                "На данный момент скачивание файлов больше 50 МБ невозможно, "
-                "но это временное ограничение. Попробуйте видео покороче! 😊"
-            )
-            return
-
-        await status_msg.edit_text("⏳ Размер подходит. Начинаю скачивание...")
-        
         os.makedirs("downloads", exist_ok=True)
-        file_path = await loop.run_in_executor(None, download_video, url, status_msg, loop)
+        await status_msg.edit_text("⏳ Начинаю скачивание в максимальном оригинальном качестве...")
+        
+        file_path, video_info = await loop.run_in_executor(None, download_video, url, status_msg, loop)
+        
+        file_path = await loop.run_in_executor(None, compress_video_high_quality, file_path, 49.0)
         
         real_size = os.path.getsize(file_path)
         if real_size > 50 * 1024 * 1024:
             os.remove(file_path)
-            await status_msg.edit_text("❌ Упс! После обработки файл превысил 50 МБ. Пока не могу его отправить.")
+            await status_msg.edit_text("❌ К сожалению, видео превышает 50 МБ даже после сжатия без потери качества.")
             return
 
-        await status_msg.edit_text("✅ Готово! Отправляю видео...")
+        await status_msg.edit_text("✅ Готово! Подготавливаю и отправляю видео...")
         
+        width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
+        
+        if not width or not height:
+            width = video_info.get("width")
+            height = video_info.get("height")
+        if not duration:
+            duration = video_info.get("duration")
+            
+        title = video_info.get("title", "Видео")
+
+        thumb_file_path = os.path.splitext(file_path)[0] + "_thumb.jpg"
+        thumb_result = await loop.run_in_executor(None, create_video_thumbnail, file_path, thumb_file_path)
+
         video = FSInputFile(file_path)
-        await message.answer_video(video, caption=f"🎬 {info.get('title', 'Видео')}")
+        thumbnail = FSInputFile(thumb_result) if thumb_result else None
+
+        await message.answer_video(
+            video,
+            caption=f"🎬 {title}",
+            width=width,
+            height=height,
+            duration=int(duration) if duration else None,
+            thumbnail=thumbnail,
+            supports_streaming=True
+        )
         await status_msg.delete()
         
         if os.path.exists(file_path):
             os.remove(file_path)
+        if thumb_result and os.path.exists(thumb_result):
+            os.remove(thumb_result)
             
     except Exception as e:
         logger.error(f"Error processing URL {url}: {e}")
