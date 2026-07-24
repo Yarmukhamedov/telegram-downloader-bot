@@ -60,10 +60,12 @@ async def progress_hook(d, message: types.Message, last_update_time):
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 LOCAL_FFMPEG = os.path.join(PROJECT_ROOT, "bin", "ffmpeg")
 
+import shutil
+
 def get_ffmpeg_path():
     if os.path.exists(LOCAL_FFMPEG):
         return LOCAL_FFMPEG
-    return "ffmpeg" # Используем системный, если локального нет
+    return shutil.which("ffmpeg") or "ffmpeg"
 
 def get_video_info(url):
     """Получает информацию о видео без скачивания"""
@@ -71,13 +73,11 @@ def get_video_info(url):
         'cookiefile': COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
         'noplaylist': True,
         'quiet': True,
-        'enable_remote_components': 'ejs:github',
         'ffmpeg_location': get_ffmpeg_path(),
-        'js_runtimes': {'node': {}},
         'cachedir': os.path.join(PROJECT_ROOT, '.cache'),
         'extractor_args': {
             'youtube': {
-                'player_client': ['web', 'tv'],
+                'player_client': ['ios', 'android', 'mweb', 'web'],
             }
         },
     }
@@ -86,33 +86,24 @@ def get_video_info(url):
 
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
-    
     ffmpeg_path = get_ffmpeg_path()
-    
-    try:
-        # Проверка версии с учетом пути к ffmpeg
-        subprocess.run([ffmpeg_path, "-version"], capture_output=True)
-    except:
-        logger.warning(f"FFmpeg not found at {ffmpeg_path}")
 
     ydl_opts = {
-        'format': 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[ext=m4a]/best[height<=1080][vcodec^=avc1]/best[ext=mp4]/best',
+        'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
         'outtmpl': 'downloads/%(id)s.%(ext)s',
         'logger': MyLogger(),
         'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(progress_hook(d, message, last_update_time), loop)],
         'merge_output_format': 'mp4',
         'noplaylist': True,
-        'enable_remote_components': 'ejs:github',
         'ffmpeg_location': ffmpeg_path,
-        'js_runtimes': {'node': {}},
         'cachedir': os.path.join(PROJECT_ROOT, '.cache'),
         'extractor_args': {
             'youtube': {
-                'player_client': ['web', 'tv'],
+                'player_client': ['ios', 'android', 'mweb', 'web'],
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         },
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
