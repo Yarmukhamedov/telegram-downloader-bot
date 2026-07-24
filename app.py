@@ -358,27 +358,33 @@ async def inline_search_handler(inline_query: types.InlineQuery):
 
 async def create_bot_instance() -> Bot:
     proxy_url = os.getenv("TELEGRAM_PROXY")
-    bot_api_server = os.getenv("BOT_API_SERVER")
+    bot_api_env = os.getenv("BOT_API_SERVER")
     
-    use_local_api = False
-    if bot_api_server:
-        logger.info(f"Connecting to Local Bot API '{bot_api_server}'...")
-        for attempt in range(1, 16):
+    candidate_urls = []
+    if bot_api_env:
+        candidate_urls.append(bot_api_env)
+    candidate_urls.extend(["http://127.0.0.1:8081", "http://localhost:8081", "http://telegram-bot-api:8081"])
+
+    chosen_api_url = None
+    for attempt in range(1, 16):
+        for candidate in candidate_urls:
             try:
                 async with aiohttp.ClientSession() as session:
-                    url = f"{bot_api_server.rstrip('/')}/bot{BOT_TOKEN}/getMe"
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                    url = f"{candidate.rstrip('/')}/bot{BOT_TOKEN}/getMe"
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.5)) as resp:
                         if resp.status in (200, 400, 401, 404):
-                            use_local_api = True
-                            logger.info(f"✅ Local Bot API connected on attempt {attempt}!")
+                            chosen_api_url = candidate
                             break
-            except Exception as e:
-                logger.info(f"Waiting for Local Bot API server... (attempt {attempt}/15): {e}")
-                await asyncio.sleep(1)
+            except Exception:
+                pass
+        if chosen_api_url:
+            break
+        logger.info(f"Connecting to Local Bot API (attempt {attempt}/15)...")
+        await asyncio.sleep(1)
 
-    if use_local_api:
-        logger.info(f"✅ Using Local Bot API Server: {bot_api_server}")
-        api = TelegramAPIServer.from_base(bot_api_server)
+    if chosen_api_url:
+        logger.info(f"✅ Connected to Local Bot API Server at: {chosen_api_url}")
+        api = TelegramAPIServer.from_base(chosen_api_url)
         session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
         return Bot(token=BOT_TOKEN, session=session)
     else:
