@@ -106,6 +106,51 @@ def get_video_metadata(file_path: str):
         logger.error(f"Metadata error via ffprobe: {e}")
         return None, None, None
 
+def ensure_h264_codec(file_path: str) -> str:
+    ffprobe_path = get_ffprobe_path()
+    cmd_probe = [
+        ffprobe_path,
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_streams",
+        file_path
+    ]
+    try:
+        res = subprocess.run(cmd_probe, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        data = json.loads(res.stdout)
+        codec_name = ""
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                codec_name = stream.get("codec_name", "").lower()
+                break
+                
+        if "h264" in codec_name or "avc" in codec_name:
+            logger.info(f"Video codec is already {codec_name}. Native Telegram playback supported.")
+            return file_path
+            
+        logger.info(f"Video codec is {codec_name} (AV1/VP9). Remuxing to H.264 for smooth Telegram playback...")
+        converted_path = os.path.splitext(file_path)[0] + "_h264.mp4"
+        ffmpeg_path = get_ffmpeg_path()
+        cmd_convert = [
+            ffmpeg_path,
+            "-y",
+            "-i", file_path,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "18",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            converted_path
+        ]
+        subprocess.run(cmd_convert, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        if os.path.exists(converted_path) and os.path.getsize(converted_path) > 0:
+            os.remove(file_path)
+            return converted_path
+    except Exception as e:
+        logger.error(f"Error ensuring H264 codec: {e}")
+        
+    return file_path
+
 def create_video_thumbnail(file_path: str, output_thumb_path: str):
     ffmpeg_path = get_ffmpeg_path()
     cmd = [
@@ -144,7 +189,8 @@ def get_base_ydl_opts(use_cookies=True):
     ffmpeg_path = get_ffmpeg_path()
     
     ydl_opts = {
-        "format": "bv*+ba/b",
+        "format": "bestvideo+bestaudio/bestvideo/best/bv*+ba/b",
+        "format_sort": ["vcodec:h264", "res", "ext:mp4:m4a"],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
@@ -178,7 +224,6 @@ def get_video_info(url):
 def download_video(url, message: types.Message, loop):
     last_update_time = [loop.time()]
     
-    # 1. Попытка с cookies и bv*+ba/b
     try:
         ydl_opts = get_base_ydl_opts(use_cookies=True)
         ydl_opts["logger"] = MyLogger()
@@ -192,9 +237,8 @@ def download_video(url, message: types.Message, loop):
             final_file = mp4_path if os.path.exists(mp4_path) else filename
             return final_file, info
     except Exception as e:
-        logger.warning(f"Primary format download with cookies failed: {e}. Trying fallback without cookies...")
+        logger.warning(f"Primary download failed: {e}. Trying fallback without cookies...")
         
-        # 2. Фолбэк без cookies va uniformal format selector
         ydl_opts_fallback = get_base_ydl_opts(use_cookies=False)
         ydl_opts_fallback["logger"] = MyLogger()
         ydl_opts_fallback["outtmpl"] = "downloads/%(id)s.%(ext)s"
@@ -241,6 +285,8 @@ async def handle_text_message(message: types.Message):
         await status_msg.edit_text("⏳ Начинаю скачивание в 100% оригинальном качестве (HD/4K)...")
         
         file_path, video_info = await loop.run_in_executor(None, download_video, url, status_msg, loop)
+
+        file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
 
         await status_msg.edit_text("✅ Готово! Подготавливаю и отправляю видео...")
         
