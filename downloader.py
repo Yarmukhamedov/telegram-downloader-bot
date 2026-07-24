@@ -78,7 +78,7 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
         },
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "ios", "mweb", "web"]
+                "player_client": ["tv", "mweb", "android", "ios"]
             }
         },
         "postprocessor_args": {
@@ -288,9 +288,14 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
             final_file = mp4_path if os.path.exists(mp4_path) else filename
             return final_file, info
     except Exception as e:
-        logger.warning(f"Primary download with cookies failed: {e}. Trying fallback without cookies...")
+        logger.warning(f"Primary download failed: {e}. Trying fallback with TV player client...")
         
         ydl_opts_fallback = get_base_ydl_opts(quality=quality, use_cookies=False)
+        ydl_opts_fallback["extractor_args"] = {
+            "youtube": {
+                "player_client": ["tv", "mweb"]
+            }
+        }
         ydl_opts_fallback["logger"] = MyLogger()
         ydl_opts_fallback["outtmpl"] = "downloads/%(id)s.%(ext)s"
         if progress_fn:
