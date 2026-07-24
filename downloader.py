@@ -55,6 +55,7 @@ class MyLogger:
 
 def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
     ffmpeg_path = get_ffmpeg_path()
+    node_path = shutil.which("node")
     
     if quality == '720p':
         format_spec = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
@@ -63,12 +64,11 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
     elif quality == 'mp3':
         format_spec = "bestaudio/best"
     else:
-        format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b"
+        format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b/best"
 
-    node_path = shutil.which("node")
     ydl_opts = {
         "format": format_spec,
-        "format_sort": ["vcodec:h264", "res", "ext:mp4:m4a"],
+        "format_sort": ["res", "ext:mp4:m4a"],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
@@ -76,10 +76,16 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
         "http_headers": {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         },
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb", "web"]
+            }
+        },
         "postprocessor_args": {
             "ffmpeg": ["-movflags", "+faststart"]
         }
     }
+
     if node_path:
         ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
 
@@ -181,10 +187,6 @@ def ensure_h264_codec(file_path: str) -> str:
     return file_path
 
 def compress_video_to_target_size(file_path: str, target_mb: float = 48.0) -> str:
-    """
-    Compresses video using ffmpeg so that final size < 49 MB
-    for standard Telegram Bot API compatibility.
-    """
     if not os.path.exists(file_path):
         return file_path
     
