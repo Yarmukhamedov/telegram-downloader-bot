@@ -6,6 +6,7 @@ import shutil
 import asyncio
 import logging
 import subprocess
+import urllib.request
 import yt_dlp
 from dotenv import load_dotenv
 
@@ -29,7 +30,6 @@ from keyboards import (
 )
 from admin import admin_router, get_admin_ids
 
-# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -43,24 +43,40 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN is not set!")
     sys.exit(1)
 
-bot_api_server = os.getenv("BOT_API_SERVER")
-if bot_api_server:
-    logger.info(f"Using Local Telegram Bot API Server: {bot_api_server}")
-    session = AiohttpSession(api=TelegramAPIServer.from_base(bot_api_server))
-    bot = Bot(token=BOT_TOKEN, session=session)
-else:
-    bot = Bot(token=BOT_TOKEN)
+def is_bot_api_available(server_url: str) -> bool:
+    if not server_url:
+        return False
+    try:
+        url = f"{server_url.rstrip('/')}/bot{BOT_TOKEN}/getMe"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=2) as response:
+            return response.status in (200, 401, 404)
+    except Exception as e:
+        logger.warning(f"Local Bot API server '{server_url}' not reachable ({e}). Using official api.telegram.org")
+        return False
 
+bot_api_server = os.getenv("BOT_API_SERVER")
+proxy_url = os.getenv("TELEGRAM_PROXY")
+
+def create_bot_instance():
+    if bot_api_server and is_bot_api_available(bot_api_server):
+        logger.info(f"Connected to Local Bot API Server: {bot_api_server}")
+        api = TelegramAPIServer.from_base(bot_api_server)
+        session = AiohttpSession(proxy=proxy_url, api=api) if proxy_url else AiohttpSession(api=api)
+    else:
+        session = AiohttpSession(proxy=proxy_url) if proxy_url else None
+
+    if session:
+        return Bot(token=BOT_TOKEN, session=session)
+    return Bot(token=BOT_TOKEN)
+
+bot = create_bot_instance()
 dp = Dispatcher()
 dp.include_router(admin_router)
 
-# Store transient URLs for inline quality selector
 url_cache = {}
 
 async def check_channel_subscription(user_id: int) -> tuple[bool, str, str]:
-    """
-    Returns (is_subscribed, channel_id, channel_link)
-    """
     admin_ids = get_admin_ids()
     if user_id in admin_ids:
         return True, "", ""
@@ -77,7 +93,7 @@ async def check_channel_subscription(user_id: int) -> tuple[bool, str, str]:
             return True, ch_id, ch_link
     except Exception as e:
         logger.warning(f"Failed to check channel subscription for user {user_id}: {e}")
-        return True, "", "" # Fail open if bot is not admin in channel
+        return True, "", ""
 
     return False, ch_id, ch_link
 
@@ -180,11 +196,9 @@ async def cb_check_sub(callback: types.CallbackQuery):
 
 @dp.message(F.text)
 async def handle_media_download(message: types.Message):
-    # Ignore command buttons
     if message.text in ["⚙️ Sozlamalar", "👤 Profil / Tarif", "ℹ️ Yordam", "🛠 Admin Panel"]:
         return
 
-    # Check Channel Subscription
     is_sub, ch_id, ch_link = await check_channel_subscription(message.from_user.id)
     if not is_sub:
         text = (
@@ -194,13 +208,11 @@ async def handle_media_download(message: types.Message):
         await message.answer(text, reply_markup=get_force_sub_keyboard(ch_link), parse_mode="Markdown")
         return
 
-    # Detect platform and extract URL
     platform, icon, url = detect_platform_and_url(message.text)
     if not url:
         await message.answer("ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!")
         return
 
-    # Check Daily Limit
     can_download, current_usage = await check_daily_limit(message.from_user.id, free_limit=15)
     if not can_download:
         await message.answer(
@@ -213,7 +225,6 @@ async def handle_media_download(message: types.Message):
     user = await get_or_create_user(message.from_user.id)
     pref_quality = user['preferred_quality']
 
-    # If quality is set to 'ask', prompt user with inline keyboard
     if pref_quality == 'ask':
         import hashlib
         url_hash = hashlib.md5(url.encode()).hexdigest()[:10]
@@ -226,7 +237,6 @@ async def handle_media_download(message: types.Message):
         )
         return
 
-    # Direct auto-download using user's saved quality preference
     await process_and_send_media(message, url, platform, icon, pref_quality)
 
 @dp.callback_query(F.data.startswith("download_q:"))
@@ -274,7 +284,6 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
         title = video_info.get("title", f"{platform} Video")
 
         if quality == 'mp3' or file_path.endswith(".mp3"):
-            # MP3 Audio Delivery
             await status_msg.edit_text("🎵 MP3 audio fayl tayyorlanmoqda...")
             mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
             
@@ -289,9 +298,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 os.remove(mp3_file)
 
         else:
-            # Video Delivery with H.264 smooth playback guarantee
             file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
-            
             await status_msg.edit_text("✅ Tayyor! Telegram'ga yuborilmoqda...")
             
             width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
@@ -375,21 +382,8 @@ async def main():
     await init_db()
     
     logger.info("Bot is starting...")
-    proxy_url = os.getenv("TELEGRAM_PROXY")
-    bot_api_server = os.getenv("BOT_API_SERVER")
-    
-    if proxy_url:
-        logger.info(f"Using Telegram Proxy: {proxy_url}")
-        if bot_api_server:
-            session = AiohttpSession(proxy=proxy_url, api=TelegramAPIServer.from_base(bot_api_server))
-        else:
-            session = AiohttpSession(proxy=proxy_url)
-        bot_instance = Bot(token=BOT_TOKEN, session=session)
-        await bot_instance.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot_instance)
-    else:
-        await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     try:
