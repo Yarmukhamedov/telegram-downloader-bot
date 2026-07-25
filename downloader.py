@@ -53,7 +53,7 @@ class MyLogger:
     def error(self, msg):
         logger.error(msg)
 
-def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
+def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_clients: list = None):
     ffmpeg_path = get_ffmpeg_path()
     node_path = shutil.which("node")
     
@@ -66,6 +66,9 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
     else:
         format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b/best"
 
+    if not player_clients:
+        player_clients = ["tv", "web_creator", "android_vr", "ios", "mweb"]
+
     ydl_opts = {
         "format": format_spec,
         "format_sort": ["res", "ext:mp4:m4a"],
@@ -73,12 +76,10 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
         "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
-        "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        },
         "extractor_args": {
             "youtube": {
-                "player_client": ["web", "mweb", "android", "ios"]
+                "player_client": player_clients,
+                "po_token": ["web+http://127.0.0.1:4416/token"]
             }
         },
         "postprocessor_args": {
@@ -278,36 +279,30 @@ def create_video_thumbnail(file_path: str, output_thumb_path: str):
     return None
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
-    try:
-        ydl_opts = get_base_ydl_opts(quality=quality, use_cookies=True)
-        ydl_opts["logger"] = MyLogger()
-        ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
-        if progress_fn:
-            ydl_opts["progress_hooks"] = [progress_fn]
+    client_chains = [
+        ["tv", "web_creator", "android_vr"],
+        ["ios", "mweb"],
+        ["android", "web"]
+    ]
+    
+    last_exception = None
+    for idx, clients in enumerate(client_chains, start=1):
+        try:
+            logger.info(f"⏳ Download attempt {idx} with player clients: {clients}...")
+            ydl_opts = get_base_ydl_opts(quality=quality, use_cookies=True, player_clients=clients)
+            ydl_opts["logger"] = MyLogger()
+            ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
+            if progress_fn:
+                ydl_opts["progress_hooks"] = [progress_fn]
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            mp4_path = os.path.splitext(filename)[0] + ".mp4"
-            final_file = mp4_path if os.path.exists(mp4_path) else filename
-            return final_file, info
-    except Exception as e:
-        logger.warning(f"Primary download failed: {e}. Trying fallback with cookies preserved...")
-        
-        ydl_opts_fallback = get_base_ydl_opts(quality=quality, use_cookies=True)
-        ydl_opts_fallback["extractor_args"] = {
-            "youtube": {
-                "player_client": ["android", "ios", "mweb"]
-            }
-        }
-        ydl_opts_fallback["logger"] = MyLogger()
-        ydl_opts_fallback["outtmpl"] = "downloads/%(id)s.%(ext)s"
-        if progress_fn:
-            ydl_opts_fallback["progress_hooks"] = [progress_fn]
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                filename = ydl.prepare_filename(info)
+                mp4_path = os.path.splitext(filename)[0] + ".mp4"
+                final_file = mp4_path if os.path.exists(mp4_path) else filename
+                return final_file, info
+        except Exception as e:
+            logger.warning(f"Download attempt {idx} with clients {clients} failed: {e}")
+            last_exception = e
 
-        with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            mp4_path = os.path.splitext(filename)[0] + ".mp4"
-            final_file = mp4_path if os.path.exists(mp4_path) else filename
-            return final_file, info
+    raise last_exception
