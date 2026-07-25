@@ -65,22 +65,21 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
     elif quality == 'mp3':
         format_spec = "bestaudio/best"
     else:
-        format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b/best"
+        format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b/best/mp4"
 
     if not player_clients:
-        player_clients = ["tv", "web_creator", "android_vr", "ios", "mweb"]
+        player_clients = ["web", "mweb", "android", "ios"]
 
     ydl_opts = {
         "format": format_spec,
-        "format_sort": ["res", "ext:mp4:m4a"],
+        "format_sort": ["res", "ext:mp4:m4a", "hasvid", "hasaud"],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
         "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
         "extractor_args": {
             "youtube": {
-                "player_client": player_clients,
-                "po_token": ["web+http://127.0.0.1:4416/token"]
+                "player_client": player_clients
             }
         },
         "postprocessor_args": {
@@ -321,9 +320,8 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     client_chains = [
-        ["tv", "web_creator", "android_vr"],
-        ["ios", "mweb"],
-        ["android", "web"]
+        ["web", "mweb", "android", "ios"],
+        ["tv", "android_vr"],
     ]
     
     last_exception = None
