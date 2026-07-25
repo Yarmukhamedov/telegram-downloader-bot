@@ -5,6 +5,7 @@ import json
 import shutil
 import logging
 import subprocess
+import requests
 import yt_dlp
 
 logging.basicConfig(
@@ -94,8 +95,6 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         c_size = os.path.getsize(COOKIES_PATH)
         logger.info(f"🍪 Active Cookies File Loaded: {COOKIES_PATH} (Size: {c_size} bytes)")
         ydl_opts["cookiefile"] = COOKIES_PATH
-    else:
-        logger.warning(f"⚠️ Cookies file not found or empty at: {COOKIES_PATH}")
 
     return ydl_opts
 
@@ -278,6 +277,48 @@ def create_video_thumbnail(file_path: str, output_thumb_path: str):
         logger.error(f"Thumbnail error: {e}")
     return None
 
+def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
+    logger.info("⚡️ Trying Cobalt API fallback for YouTube video...")
+    api_urls = [
+        "https://api.cobalt.tools/api/json",
+        "https://cobalt-api.kwiats.com/api/json",
+        "https://co.wuk.sh/api/json"
+    ]
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    vq = "1080" if quality == "best" else ("720" if quality == "720p" else "480")
+    payload = {
+        "url": url,
+        "videoQuality": vq,
+        "isAudioOnly": True if quality == "mp3" else False
+    }
+    
+    for endpoint in api_urls:
+        try:
+            resp = requests.post(endpoint, json=payload, headers=headers, timeout=12)
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                media_url = data.get("url")
+                if media_url:
+                    r = requests.get(media_url, stream=True, timeout=60)
+                    if r.status_code == 200:
+                        os.makedirs("downloads", exist_ok=True)
+                        ext = ".mp3" if quality == "mp3" else ".mp4"
+                        file_path = f"downloads/fallback_{hash(url)}{ext}"
+                        with open(file_path, "wb") as f:
+                            for chunk in r.iter_content(chunk_size=1024*1024):
+                                if chunk:
+                                    f.write(chunk)
+                        logger.info(f"🚀 ✅ Cobalt API fallback successfully downloaded video to {file_path}")
+                        return file_path, {"title": "YouTube Video"}
+        except Exception as e:
+            logger.warning(f"Cobalt endpoint {endpoint} failed: {e}")
+            
+    raise Exception("All Cobalt API fallback endpoints failed")
+
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     client_chains = [
         ["tv", "web_creator", "android_vr"],
@@ -304,5 +345,11 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
         except Exception as e:
             logger.warning(f"Download attempt {idx} with clients {clients} failed: {e}")
             last_exception = e
+
+    if "youtube" in url or "youtu.be" in url:
+        try:
+            return download_via_cobalt_fallback(url, quality)
+        except Exception as cob_err:
+            logger.error(f"Cobalt fallback failed: {cob_err}")
 
     raise last_exception
