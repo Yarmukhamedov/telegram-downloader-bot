@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting
+from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting, create_redeem_code
 from keyboards import get_admin_keyboard
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class AdminStates(StatesGroup):
     waiting_for_premium_input = State()
 
 @admin_router.message(Command("admin"))
-@admin_router.message(F.text == "🛠 Admin Panel")
+@admin_router.message(F.text.in_(["🛠 Admin Panel", "🛠 Админ панель"]))
 async def cmd_admin_panel(message: types.Message):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
@@ -43,6 +43,8 @@ async def cmd_admin_panel(message: types.Message):
             f"⚡️ **Bugun faol:** {stats['active_today']} ta\n\n"
             f"📊 **Jami yuklab olishlar:** {stats['total_downloads']} ta\n"
             f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n\n"
+            f"🪙 **Jami Coinlar (bazada):** {stats.get('total_coins', 0)} 🪙\n"
+            f"👥 **Jami takliflar (referallar):** {stats.get('total_referrals', 0)} ta\n\n"
             "👇 *Quyidagi tugmalar orqali botni boshqarishingiz mumkin:*"
         )
         await message.answer(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
@@ -64,7 +66,9 @@ async def cb_admin_stats(callback: types.CallbackQuery):
         f"⭐ **Premium foydalanuvchilar:** {stats['premium_users']} ta\n"
         f"⚡️ **Bugun faol:** {stats['active_today']} ta\n\n"
         f"📊 **Jami yuklab olishlar:** {stats['total_downloads']} ta\n"
-        f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n"
+        f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n\n"
+        f"🪙 **Jami Coinlar (bazada):** {stats.get('total_coins', 0)} 🪙\n"
+        f"👥 **Jami takliflar (referallar):** {stats.get('total_referrals', 0)} ta\n"
     )
     await callback.message.edit_text(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
     await callback.answer()
@@ -196,3 +200,23 @@ async def cmd_grant_premium(message: types.Message):
             await message.answer(f"❌ Foydalanuvchi `{uid}` bazadan topilmadi.")
     else:
         await message.answer("ℹ️ Foydalanish: `/grant_premium <user_id> <days>`")
+
+@admin_router.message(Command("create_code"))
+async def cmd_create_code(message: types.Message):
+    admin_ids = get_admin_ids()
+    if message.from_user.id not in admin_ids:
+        return
+
+    parts = message.text.strip().split()
+    if len(parts) >= 4:
+        code = parts[1]
+        r_type = parts[2]
+        val = int(parts[3])
+        max_u = int(parts[4]) if len(parts) > 4 else 100
+        res = await create_redeem_code(code, r_type, val, max_u)
+        if res:
+            await message.answer(f"✅ Yangi promokod yaratildi!\n🎟 **Kod:** `{code}`\n🎁 **Turi:** {r_type} (+{val})\n👥 **Limit:** {max_u} ta kishi", parse_mode="Markdown")
+        else:
+            await message.answer("❌ Bu kod avval yaratilgan yoki xatolik yuz berdi.")
+    else:
+        await message.answer("ℹ️ Foydalanish formatlari:\n`/create_code NAVROZ2026 coins 500 100` (100 kishi 500 coindan oladi)\n`/create_code VIP2026 days 7 50` (50 kishi 7 kunlik VIP oladi)", parse_mode="Markdown")

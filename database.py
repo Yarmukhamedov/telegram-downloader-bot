@@ -50,6 +50,42 @@ async def init_db():
             await db.execute("ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0")
         except Exception:
             pass
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'uz'")
+        except Exception:
+            pass
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_id INTEGER,
+                referred_id INTEGER UNIQUE,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS redeem_codes (
+                code TEXT PRIMARY KEY,
+                reward_type TEXT,
+                reward_value INTEGER,
+                max_uses INTEGER,
+                used_count INTEGER DEFAULT 0,
+                created_at TEXT
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS user_redeems (
+                user_id INTEGER,
+                code TEXT,
+                redeemed_at TEXT,
+                PRIMARY KEY (user_id, code)
+            )
+        """)
         await db.commit()
     logger.info("Database initialized successfully.")
 
@@ -80,15 +116,11 @@ async def register_user_with_referral(user_id: int, username: str = None, full_n
                     valid_ref_id = ref_id
                     new_count = (ref_row['referral_count'] or 0) + 1
                     await db.execute("UPDATE users SET referral_count = ? WHERE user_id = ?", (new_count, ref_id))
-                    if new_count > 0 and new_count % 3 == 0:
-                        until_dt = datetime.now() + timedelta(days=7)
-                        until_str = until_dt.isoformat()
-                        await db.execute("UPDATE users SET is_premium = 1, premium_until = ? WHERE user_id = ?", (until_str, ref_id))
-                        referrer_got_bonus = ref_id
+                    await db.execute("INSERT OR IGNORE INTO referrals (referrer_id, referred_id, status, created_at) VALUES (?, ?, 'pending', ?)", (valid_ref_id, user_id, now_str))
 
             await db.execute("""
-                INSERT INTO users (user_id, username, full_name, preferred_quality, is_premium, daily_downloads, last_download_date, joined_at, referred_by, referral_count)
-                VALUES (?, ?, ?, 'best', 0, 0, ?, ?, ?, 0)
+                INSERT INTO users (user_id, username, full_name, preferred_quality, is_premium, daily_downloads, last_download_date, joined_at, referred_by, referral_count, coins, language)
+                VALUES (?, ?, ?, 'best', 0, 0, ?, ?, ?, 0, 0, 'uz')
             """, (user_id, username, full_name, today_str, now_str, valid_ref_id))
             await db.commit()
             
@@ -126,7 +158,9 @@ async def register_user_with_referral(user_id: int, username: str = None, full_n
             "daily_downloads": daily_downloads,
             "joined_at": user['joined_at'],
             "referred_by": user['referred_by'],
-            "referral_count": user['referral_count'] or 0
+            "referral_count": user['referral_count'] or 0,
+            "coins": user['coins'] or 0 if 'coins' in user.keys() else 0,
+            "language": user['language'] or 'uz' if 'language' in user.keys() else 'uz'
         }
         return user_dict, is_new, referrer_got_bonus
 
@@ -219,6 +253,19 @@ async def get_admin_stats() -> dict:
                     if row: downloads_today = row[0]
             except Exception as e:
                 logger.warning(f"Stats error downloads_today: {e}")
+            total_coins, total_referrals = 0, 0
+            try:
+                async with db.execute("SELECT SUM(coins) FROM users") as c:
+                    row = await c.fetchone()
+                    if row and row[0]: total_coins = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error total_coins: {e}")
+            try:
+                async with db.execute("SELECT COUNT(*) FROM referrals") as c:
+                    row = await c.fetchone()
+                    if row: total_referrals = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error total_referrals: {e}")
     except Exception as e:
         logger.error(f"Error connecting for stats: {e}")
 
@@ -227,7 +274,9 @@ async def get_admin_stats() -> dict:
         "premium_users": premium_users,
         "active_today": active_today,
         "total_downloads": total_downloads,
-        "downloads_today": downloads_today
+        "downloads_today": downloads_today,
+        "total_coins": total_coins,
+        "total_referrals": total_referrals
     }
 
 async def get_all_user_ids() -> list[int]:
@@ -235,3 +284,110 @@ async def get_all_user_ids() -> list[int]:
         async with db.execute("SELECT user_id FROM users") as cursor:
             rows = await cursor.fetchall()
             return [r[0] for r in rows]
+
+async def get_user_coins(user_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT coins FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] is not None else 0
+
+async def add_user_coins(user_id: int, amount: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE user_id = ?", (amount, user_id))
+        await db.commit()
+        async with db.execute("SELECT coins FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] is not None else 0
+
+async def get_user_language(user_id: int) -> str:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT language FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] is not None else 'uz'
+
+async def set_user_language(user_id: int, language: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET language = ? WHERE user_id = ?", (language, user_id))
+        await db.commit()
+
+async def get_referral_stats(user_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,)) as cur:
+            row = await cur.fetchone()
+            total = row[0] if row else 0
+        async with db.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND status = 'active'", (user_id,)) as cur:
+            row = await cur.fetchone()
+            active = row[0] if row else 0
+        async with db.execute("SELECT COALESCE(referral_count, 0) FROM users WHERE user_id = ?", (user_id,)) as cur:
+            row = await cur.fetchone()
+            legacy_count = row[0] if row else 0
+        total = max(total, legacy_count)
+    return {"total": total, "active": active, "earned_coins": active * 100}
+
+async def verify_referral_activity(user_id: int) -> tuple[int, int]:
+    """Called when user_id successfully downloads a file. Returns (referrer_id, coins_awarded) or (0, 0)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT id, referrer_id FROM referrals WHERE referred_id = ? AND status = 'pending'", (user_id,)) as cur:
+            row = await cur.fetchone()
+        if not row:
+            return 0, 0
+        ref_row_id = row[0]
+        referrer_id = row[1]
+        
+        await db.execute("UPDATE referrals SET status = 'active' WHERE id = ?", (ref_row_id,))
+        
+        # Check active count this month for cap
+        this_month = date.today().strftime("%Y-%m")
+        async with db.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND status = 'active' AND created_at LIKE ?", (referrer_id, f"{this_month}%")) as cur:
+            cnt_row = await cur.fetchone()
+            active_this_month = cnt_row[0] if cnt_row else 0
+            
+        coins_to_award = 100 if active_this_month <= 10 else 10
+        await db.execute("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE user_id = ?", (coins_to_award, referrer_id))
+        await db.commit()
+        return referrer_id, coins_to_award
+
+async def create_redeem_code(code: str, reward_type: str, reward_value: int, max_uses: int) -> bool:
+    now_str = datetime.now().isoformat()
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute("INSERT OR REPLACE INTO redeem_codes (code, reward_type, reward_value, max_uses, used_count, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+                             (code.upper(), reward_type, reward_value, max_uses, now_str))
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error creating code: {e}")
+        return False
+
+async def redeem_code(user_id: int, code: str) -> tuple[bool, str, int]:
+    now_str = datetime.now().isoformat()
+    code_upper = code.strip().upper()
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM redeem_codes WHERE code = ?", (code_upper,)) as cur:
+            row = await cur.fetchone()
+        if not row:
+            return False, "NOT_FOUND", 0
+        if row['used_count'] >= row['max_uses']:
+            return False, "EXPIRED", 0
+        
+        async with db.execute("SELECT * FROM user_redeems WHERE user_id = ? AND code = ?", (user_id, code_upper)) as cur:
+            used_row = await cur.fetchone()
+        if used_row:
+            return False, "ALREADY_USED", 0
+            
+        await db.execute("INSERT INTO user_redeems (user_id, code, redeemed_at) VALUES (?, ?, ?)", (user_id, code_upper, now_str))
+        await db.execute("UPDATE redeem_codes SET used_count = used_count + 1 WHERE code = ?", (code_upper,))
+        
+        reward_type = row['reward_type']
+        reward_value = row['reward_value']
+        
+        if reward_type == 'coins':
+            await db.execute("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE user_id = ?", (reward_value, user_id))
+        elif reward_type == 'vip':
+            until_dt = datetime.now() + timedelta(days=reward_value)
+            until_str = until_dt.isoformat()
+            await db.execute("UPDATE users SET is_premium = 1, premium_until = ? WHERE user_id = ?", (until_str, user_id))
+            
+        await db.commit()
+        return True, reward_type, reward_value

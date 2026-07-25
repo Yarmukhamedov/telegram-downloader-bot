@@ -1,42 +1,65 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+import hashlib
+from locales import get_text
 
-def get_main_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
+def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
-        [KeyboardButton(text="⚙️ Sozlamalar"), KeyboardButton(text="👤 Profil / Tarif")],
-        [KeyboardButton(text="ℹ️ Yordam")]
+        [
+            KeyboardButton(text=get_text("btn_settings", lang)),
+            KeyboardButton(text=get_text("btn_profile", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_invite_center", lang)),
+            KeyboardButton(text=get_text("btn_shop_redeem", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_help", lang)),
+            KeyboardButton(text=get_text("btn_language", lang))
+        ]
     ]
     if is_admin:
-        buttons.append([KeyboardButton(text="🛠 Admin Panel")])
+        buttons.append([KeyboardButton(text=get_text("btn_admin", lang))])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
-def get_settings_keyboard(current_quality: str = 'best') -> InlineKeyboardMarkup:
+def get_language_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="set_lang:uz"),
+            InlineKeyboardButton(text="🇷🇺 Русский", callback_data="set_lang:ru"),
+            InlineKeyboardButton(text="🇬🇧 English", callback_data="set_lang:en")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_settings_keyboard(current_quality: str = 'best', lang: str = "uz") -> InlineKeyboardMarkup:
     q_map = {
-        'best': "🎬 Eng yuqori (1080p / 4K)",
-        '720p': "📺 O'rtacha HD (720p)",
-        '480p': "📱 Tejamkor (480p)",
-        'mp3': "🎵 Faqat MP3 Audio",
-        'ask': "❓ Har safar so'rash"
+        'best': "🎬 Eng yuqori (1080p / 4K)" if lang == 'uz' else ("🎬 Максимальное (1080p / 4K)" if lang == 'ru' else "🎬 Highest (1080p / 4K)"),
+        '720p': "📺 O'rtacha HD (720p)" if lang == 'uz' else ("📺 Среднее HD (720p)" if lang == 'ru' else "📺 Medium HD (720p)"),
+        '480p': "📱 Tejamkor (480p)" if lang == 'uz' else ("📱 Экономное (480p)" if lang == 'ru' else "📱 Data Saver (480p)"),
+        'mp3': "🎵 Faqat MP3 Audio" if lang == 'uz' else ("🎵 Только MP3 Аудио" if lang == 'ru' else "🎵 MP3 Audio Only"),
+        'ask': "❓ Har safar so'rash" if lang == 'uz' else ("❓ Спрашивать каждый раз" if lang == 'ru' else "❓ Ask every time")
     }
 
     buttons = []
     for q_key, q_label in q_map.items():
         prefix = "✅ " if current_quality == q_key else ""
         buttons.append([InlineKeyboardButton(text=f"{prefix}{q_label}", callback_data=f"set_quality:{q_key}")])
+    
+    buttons.append([InlineKeyboardButton(text="🌐 Tilni o'zgartirish / Language", callback_data="change_lang_menu")])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_force_sub_keyboard(channel_link: str) -> InlineKeyboardMarkup:
+def get_force_sub_keyboard(channel_link: str, lang: str = "uz") -> InlineKeyboardMarkup:
+    sub_text = "📢 Kanalga obuna bo'lish" if lang == 'uz' else ("📢 Подписаться на канал" if lang == 'ru' else "📢 Subscribe to Channel")
+    chk_text = "✅ Obunani tekshirish" if lang == 'uz' else ("✅ Проверить подписку" if lang == 'ru' else "✅ Check Subscription")
     buttons = [
-        [InlineKeyboardButton(text="📢 Kanalga obuna bo'lish", url=channel_link)],
-        [InlineKeyboardButton(text="✅ Obunani tekshirish", callback_data="check_subscription")]
+        [InlineKeyboardButton(text=sub_text, url=channel_link)],
+        [InlineKeyboardButton(text=chk_text, callback_data="check_subscription")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_quality_selector_keyboard(video_url: str) -> InlineKeyboardMarkup:
-    # URL is shortened or hashed in callback to prevent Telegram 64-byte payload limits
-    import hashlib
     url_hash = hashlib.md5(video_url.encode()).hexdigest()[:10]
-    
     buttons = [
         [
             InlineKeyboardButton(text="🎬 1080p (Best)", callback_data=f"download_q:{url_hash}:best"),
@@ -62,11 +85,40 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_profile_keyboard() -> InlineKeyboardMarkup:
+def get_profile_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text="🎁 Bepul VIP olish (Do'stlarga taklif)", callback_data="ref_info")],
-        [InlineKeyboardButton(text="⭐ Telegram Stars bilan (50 ⭐ / 30 kun)", callback_data="buy_prem_stars")],
-        [InlineKeyboardButton(text="💳 Karta orqali (Click / Payme)", callback_data="buy_prem_card")]
+        [InlineKeyboardButton(text=get_text("btn_invite_center", lang), callback_data="invite_center_menu")],
+        [InlineKeyboardButton(text=get_text("btn_shop_redeem", lang), callback_data="shop_menu")],
+        [InlineKeyboardButton(text=get_text("btn_buy_stars", lang), callback_data="buy_prem_stars")],
+        [InlineKeyboardButton(text=get_text("btn_buy_card", lang), callback_data="buy_prem_card")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_invite_center_keyboard(ref_link: str, lang: str = "uz") -> InlineKeyboardMarkup:
+    share_text = "🚀 Eng zo'r video yuklovchi bot! Hech qanday suv belgisiz va super sifatda yuklaydi!" if lang == 'uz' else (
+        "🚀 Лучший бот для скачивания видео! Без водяных знаков и в высоком качестве!" if lang == 'ru' else
+        "🚀 Best video downloader bot! High quality without watermarks!"
+    )
+    btn_share = "📤 Havolani do'stlarga yuborish" if lang == 'uz' else ("📤 Поделиться ссылкой" if lang == 'ru' else "📤 Share Link with Friends")
+    btn_shop = "🛍 Do'konga o'tish" if lang == 'uz' else ("🛍 Перейти в магазин" if lang == 'ru' else "🛍 Go to Shop")
+    
+    from urllib.parse import quote
+    share_url = f"https://t.me/share/url?url={quote(ref_link)}&text={quote(share_text)}"
+    
+    buttons = [
+        [InlineKeyboardButton(text=btn_share, url=share_url)],
+        [InlineKeyboardButton(text=btn_shop, callback_data="shop_menu")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_shop_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data="buy_shop:vip7")],
+        [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data="buy_shop:vip30")],
+        [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data="buy_shop:limit")],
+        [InlineKeyboardButton(text=get_text("btn_redeem_code", lang), callback_data="redeem_code_prompt")],
+        [InlineKeyboardButton(text=get_text("btn_buy_stars", lang), callback_data="buy_prem_stars")],
+        [InlineKeyboardButton(text=get_text("btn_buy_card", lang), callback_data="buy_prem_card")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

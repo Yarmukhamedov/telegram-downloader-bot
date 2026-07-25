@@ -20,7 +20,9 @@ from aiogram.client.telegram import TelegramAPIServer
 from database import (
     init_db, get_or_create_user, update_user_quality, record_download,
     check_daily_limit, get_setting, get_admin_stats, register_user_with_referral,
-    get_user_referrals, grant_premium
+    get_user_referrals, grant_premium, get_user_coins, add_user_coins,
+    get_user_language, set_user_language, get_referral_stats, verify_referral_activity,
+    create_redeem_code, redeem_code
 )
 from downloader import (
     detect_platform_and_url, download_media, get_video_metadata,
@@ -29,8 +31,10 @@ from downloader import (
 )
 from keyboards import (
     get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
-    get_quality_selector_keyboard, get_profile_keyboard, get_payment_receipt_keyboard
+    get_quality_selector_keyboard, get_profile_keyboard, get_payment_receipt_keyboard,
+    get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard
 )
+from locales import get_text
 from admin import admin_router, get_admin_ids
 
 logging.basicConfig(
@@ -84,124 +88,201 @@ async def cmd_start(message: types.Message, bot: Bot):
             pass
 
     user, is_new, referrer_got_bonus = await register_user_with_referral(message.from_user.id, message.from_user.username, message.from_user.full_name, ref_id)
-    
-    if referrer_got_bonus > 0:
-        try:
-            await bot.send_message(
-                referrer_got_bonus,
-                "🎉 **Tabriklaymiz!**\n\n"
-                "Sizning referal havolangiz orqali **3 nafar** do'stingiz botga qo'shildi!\n"
-                "🎁 Sizga avtomatik ravishda **7 kunlik ⭐ VIP Premium** obuna taqdim etildi!\n\n"
-                "Cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning! 🚀",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.warning(f"Could not notify referrer {referrer_got_bonus}: {e}")
-    elif is_new and ref_id and ref_id != message.from_user.id:
-        try:
-            ref_count = await get_user_referrals(ref_id)
-            await bot.send_message(
-                ref_id,
-                f"👤 Sizning havolangiz orqali yangi do'stingiz ({message.from_user.first_name}) botga qo'shildi!\n"
-                f"📊 **Jami taklif qilinganlar:** {ref_count} ta.\n"
-                f"🎁 Yana {3 - (ref_count % 3)} kishi qo'shilsa, 7 kunlik VIP Premium olasiz!",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.warning(f"Could not notify referrer {ref_id}: {e}")
+    lang = user.get('language', 'uz')
+
+    if is_new:
+        await message.answer(get_text("lang_select_prompt", lang), reply_markup=get_language_keyboard())
 
     admin_ids = get_admin_ids()
     is_admin = message.from_user.id in admin_ids
 
-    welcome_text = (
-        f"👋 **Xush kelibsiz, {message.from_user.first_name}!**\n\n"
-        f"Men YouTube, TikTok, Instagram, Pinterest va Twitter/X platformalaridan "
-        f"videolarni 100% original hajmda hamda yuqori sifatda yuklab beruvchi botman! 🚀\n\n"
-        f"⚡️ Shunchaki video havolasini menga yuboring!\n"
-        f"🎁 Bepul VIP olish yoki Tariflar bilan tanishish uchun **👤 Profil / Tarif** bo'limiga o'ting."
-    )
-    await message.answer(welcome_text, reply_markup=get_main_keyboard(is_admin), parse_mode="Markdown")
+    bot_info = await bot.get_me()
+    welcome_text = get_text("welcome", lang, name=message.from_user.first_name, bot_name=bot_info.first_name)
+    await message.answer(welcome_text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
+
+@dp.message(Command("lang"))
+@dp.message(F.text.in_(["🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language", "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык"]))
+@dp.callback_query(F.data == "change_lang_menu")
+async def cmd_change_lang(event: types.Message | types.CallbackQuery):
+    msg = event.message if isinstance(event, types.CallbackQuery) else event
+    user_id = event.from_user.id
+    lang = await get_user_language(user_id)
+    await msg.answer(get_text("lang_select_prompt", lang), reply_markup=get_language_keyboard())
+    if isinstance(event, types.CallbackQuery):
+        await event.answer()
+
+@dp.callback_query(F.data.startswith("set_lang:"))
+async def cb_set_lang(callback: types.CallbackQuery):
+    new_lang = callback.data.split(":")[1]
+    await set_user_language(callback.from_user.id, new_lang)
+    admin_ids = get_admin_ids()
+    is_admin = callback.from_user.id in admin_ids
+    
+    await callback.message.answer(get_text("lang_changed", new_lang), reply_markup=get_main_keyboard(is_admin, new_lang), parse_mode="Markdown")
+    await callback.message.delete()
+    await callback.answer()
 
 @dp.message(Command("settings"))
-@dp.message(F.text == "⚙️ Sozlamalar")
+@dp.message(F.text.in_(["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"]))
 async def cmd_settings(message: types.Message):
     logger.info(f">>> Sozlamalar clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id)
     quality = user['preferred_quality']
+    lang = user.get('language', 'uz')
     
     text = (
-        "⚙️ **Yuklash Sozlamalari**\n\n"
-        "Videolar qaysi sifatda yuklab olinishini tanlang.\n"
-        "Tanlangan sifat barcha kelgusi yuklashlaringizga avtomatik qo'llaniladi:"
+        "⚙️ **Yuklash Sozlamalari**\n\nVideolar qaysi sifatda yuklab olinishini tanlang:" if lang == 'uz' else (
+        "⚙️ **Настройки загрузки**\n\nВыберите качество для загрузки видео:" if lang == 'ru' else
+        "⚙️ **Download Settings**\n\nSelect preferred video download quality:")
     )
-    await message.answer(text, reply_markup=get_settings_keyboard(quality), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_settings_keyboard(quality, lang), parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("set_quality:"))
 async def cb_set_quality(callback: types.CallbackQuery):
     quality = callback.data.split(":")[1]
     await update_user_quality(callback.from_user.id, quality)
+    lang = await get_user_language(callback.from_user.id)
     
-    q_labels = {
-        'best': "🎬 Eng yuqori (1080p / 4K)",
-        '720p': "📺 O'rtacha HD (720p)",
-        '480p': "📱 Tejamkor (480p)",
-        'mp3': "🎵 Faqat MP3 Audio",
-        'ask': "❓ Har safar so'rash"
-    }
+    await callback.message.edit_reply_markup(reply_markup=get_settings_keyboard(quality, lang))
+    await callback.answer("✅ OK", show_alert=True)
 
-    selected_label = q_labels.get(quality, quality)
-    await callback.message.edit_reply_markup(reply_markup=get_settings_keyboard(quality))
-    await callback.answer(f"✅ Sozlama saqlandi: {selected_label}", show_alert=True)
-
-@dp.message(F.text == "👤 Profil / Tarif")
+@dp.message(F.text.in_(["👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan"]))
 async def cmd_profile(message: types.Message):
     logger.info(f">>> Profil clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
-    ref_count = await get_user_referrals(message.from_user.id)
+    lang = user.get('language', 'uz')
     
-    status_str = f"⭐ VIP Premium (gacha: {user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ VIP Premium (Cheksiz)" if user['is_premium'] else "🆓 Bepul (Free)")
-    daily_limit = "Cheksiz (Priority Navbat)" if user['is_premium'] else "15 ta / kun"
+    status_str = f"⭐ VIP Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ VIP Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
+    daily_limit = ("Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")) if user['is_premium'] else "15"
     
     q_map = {
-        'best': "🎬 Eng yuqori (1080p / 4K)",
-        '720p': "📺 O'rtacha HD (720p)",
-        '480p': "📱 Tejamkor (480p)",
-        'mp3': "🎵 Faqat MP3 Audio",
-        'ask': "❓ Har safar so'rash"
+        'best': "🎬 1080p / 4K",
+        '720p': "📺 720p HD",
+        '480p': "📱 480p SD",
+        'mp3': "🎵 MP3 Audio",
+        'ask': "❓ Ask"
     }
-    pref_q = q_map.get(user['preferred_quality'], "🎬 Eng yuqori")
+    pref_q = q_map.get(user['preferred_quality'], "🎬 1080p / 4K")
 
-    text = (
-        "👤 **Sizning Profilingiz va Tarif**\n\n"
-        f"🆔 **ID:** `{user['user_id']}`\n"
-        f"👤 **Ism:** {user['full_name']}\n"
-        f"👑 **Tarifingiz:** {status_str}\n"
-        f"📥 **Bugungi yuklashlar:** {user['daily_downloads']} / {daily_limit}\n"
-        f"⚙️ **Tanlangan sifat:** {pref_q}\n"
-        f"👥 **Taklif qilgan do'stlaringiz:** {ref_count} ta\n\n"
-        "💎 *VIP Premium imtiyozlari:* Cheksiz yuklash, 1080p/4K sifat, navbatsiz super-tezkor yuklash va hech qanday reklamasiz!"
+    text = get_text("profile_text", lang,
+                    user_id=user['user_id'],
+                    full_name=user['full_name'] or "User",
+                    status_str=status_str,
+                    coins=user.get('coins', 0),
+                    daily_downloads=user['daily_downloads'],
+                    daily_limit=daily_limit,
+                    pref_q=pref_q)
+    await message.answer(text, reply_markup=get_profile_keyboard(lang), parse_mode="Markdown")
+
+@dp.message(F.text.in_(["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center"]))
+@dp.callback_query(F.data == "invite_center_menu")
+async def cmd_invite_center(event: types.Message | types.CallbackQuery, bot: Bot):
+    msg = event.message if isinstance(event, types.CallbackQuery) else event
+    user_id = event.from_user.id
+    lang = await get_user_language(user_id)
+    bot_info = await bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
+    
+    stats = await get_referral_stats(user_id)
+    text = get_text("invite_center_text", lang,
+                    ref_link=ref_link,
+                    total_ref=stats['total'],
+                    active_ref=stats['active'],
+                    earned_coins=stats['earned_coins'])
+    await msg.answer(text, reply_markup=get_invite_center_keyboard(ref_link, lang), parse_mode="Markdown")
+    if isinstance(event, types.CallbackQuery):
+        await event.answer()
+
+@dp.message(F.text.in_(["🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem"]))
+@dp.callback_query(F.data == "shop_menu")
+async def cmd_shop(event: types.Message | types.CallbackQuery):
+    msg = event.message if isinstance(event, types.CallbackQuery) else event
+    user_id = event.from_user.id
+    lang = await get_user_language(user_id)
+    coins = await get_user_coins(user_id)
+    
+    text = get_text("shop_text", lang, coins=coins)
+    await msg.answer(text, reply_markup=get_shop_keyboard(lang), parse_mode="Markdown")
+    if isinstance(event, types.CallbackQuery):
+        await event.answer()
+
+@dp.callback_query(F.data.startswith("buy_shop:"))
+async def cb_buy_shop(callback: types.CallbackQuery):
+    item = callback.data.split(":")[1]
+    user_id = callback.from_user.id
+    coins = await get_user_coins(user_id)
+    lang = await get_user_language(user_id)
+    
+    costs = {"vip7": 300, "vip30": 1000, "limit": 50}
+    cost = costs.get(item, 999999)
+    
+    if coins < cost:
+        msg = "❌ Coin yetarli emas! Invite Center orqali do'stlaringizni taklif qilib Coin yig'ing." if lang == 'uz' else (
+            "❌ Недостаточно монет! Приглашайте друзей в Invite Center, чтобы заработать." if lang == 'ru' else
+            "❌ Not enough Coins! Invite friends via Invite Center to earn Coins.")
+        await callback.answer(msg, show_alert=True)
+        return
+        
+    await add_user_coins(user_id, -cost)
+    if item == "vip7":
+        await grant_premium(user_id, 7)
+        succ = "🎉 Tabriklaymiz! 300 Coin evaziga 7 kunlik VIP Premium sotib oldingiz!" if lang == 'uz' else (
+            "🎉 Поздравляем! Вы приобрели 7 дней VIP за 300 монет!" if lang == 'ru' else
+            "🎉 Congratulations! You purchased 7 Days VIP Premium for 300 Coins!")
+    elif item == "vip30":
+        await grant_premium(user_id, 30)
+        succ = "🎉 Tabriklaymiz! 1000 Coin evaziga 30 kunlik VIP Premium sotib oldingiz!" if lang == 'uz' else (
+            "🎉 Поздравляем! Вы приобрели 30 дней VIP за 1000 монет!" if lang == 'ru' else
+            "🎉 Congratulations! You purchased 30 Days VIP Premium for 1000 Coins!")
+    elif item == "limit":
+        from database import DB_PATH
+        import aiosqlite
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute("UPDATE users SET daily_downloads = MAX(0, daily_downloads - 20) WHERE user_id = ?", (user_id,))
+            await db.commit()
+        succ = "⚡️ Bugungi yuklash limitingiz +20 taga oshirildi!" if lang == 'uz' else (
+            "⚡️ Ваш лимит скачиваний на сегодня увеличен на +20!" if lang == 'ru' else
+            "⚡️ Your download limit for today has been increased by +20!")
+            
+    await callback.message.answer(succ)
+    await callback.answer()
+
+@dp.message(Command("redeem"))
+@dp.message(F.text.in_(["🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"]))
+@dp.callback_query(F.data == "redeem_code_prompt")
+async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
+    msg = event.message if isinstance(event, types.CallbackQuery) else event
+    user_id = event.from_user.id
+    lang = await get_user_language(user_id)
+    
+    args = msg.text.split() if isinstance(event, types.Message) and msg.text.startswith("/redeem") else []
+    if len(args) > 1:
+        code = args[1]
+        success, r_type, r_val = await redeem_code(user_id, code)
+        if success:
+            res_text = f"🎉 **Promokod qabul qilindi!**\n🎁 Sizga **+{r_val} {'🪙 Coin' if r_type=='coins' else 'kunlik VIP'}** taqdim etildi!"
+        else:
+            err_map = {"NOT_FOUND": "❌ Bunday promokod mavjud emas.", "EXPIRED": "❌ Bu promokodning muddati yoki limiti tuggan.", "ALREADY_USED": "❌ Siz bu promokoddan avval foydalangansiz."}
+            res_text = err_map.get(r_type, "❌ Xatolik yuz berdi.")
+        await msg.answer(res_text, parse_mode="Markdown")
+        return
+        
+    prompt = (
+        "🎟 **Promokodni yozib yuboring:**\n\nMisol uchun: `/redeem NAVROZ2026`" if lang == 'uz' else (
+        "🎟 **Введите промокод:**\n\nПример: `/redeem NAVROZ2026`" if lang == 'ru' else
+        "🎟 **Enter your Promo Code:**\n\nExample: `/redeem NAVROZ2026`")
     )
-    await message.answer(text, reply_markup=get_profile_keyboard(), parse_mode="Markdown")
+    await msg.answer(prompt, parse_mode="Markdown")
+    if isinstance(event, types.CallbackQuery):
+        await event.answer()
 
-@dp.message(F.text == "ℹ️ Yordam")
+@dp.message(F.text.in_(["ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help"]))
 async def cmd_help(message: types.Message):
     logger.info(f">>> Help clicked by user_id: {message.from_user.id}")
-    text = (
-        "ℹ️ **Botdan foydalanish yordami**\n\n"
-        "1. **Qo'llab-quvvatlanadigan platformalar:**\n"
-        "   • 🎬 YouTube (Videolar va Shorts)\n"
-        "   • 🎵 TikTok (Suv belgisiz - No Watermark)\n"
-        "   • 📸 Instagram (Reels va Videolar)\n"
-        "   • 📌 Pinterest (Videolar va GIF)\n"
-        "   • 🐦 Twitter / X (Videolar)\n\n"
-        "2. **Qanday yuklanadi?**\n"
-        "   Shunchaki istalgan video havolasini botga yuboring!\n\n"
-        "3. **Sifatni o'zgartirish:**\n"
-        "   **⚙️ Sozlamalar** tugmasi orqali MP3 audio yoki boshqa sifatlarni tanlashingiz mumkin."
-    )
-    await message.answer(text, parse_mode="Markdown")
+    lang = await get_user_language(message.from_user.id)
+    await message.answer(get_text("help_text", lang), parse_mode="Markdown")
 
-@dp.message(F.text == "🛠 Admin Panel")
+@dp.message(F.text.in_(["🛠 Admin Panel", "🛠 Админ панель"]))
 async def cmd_admin_panel_direct(message: types.Message):
     from admin import cmd_admin_panel
     await cmd_admin_panel(message)
@@ -218,30 +299,47 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
 @dp.message(F.text)
 async def handle_media_download(message: types.Message, bot: Bot):
     logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
-    if message.text in ["⚙️ Sozlamalar", "👤 Profil / Tarif", "ℹ️ Yordam", "🛠 Admin Panel"]:
+    if message.text in [
+        "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings",
+        "👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan",
+        "ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help",
+        "🛠 Admin Panel", "🛠 Админ панель",
+        "👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center",
+        "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem",
+        "🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language",
+        "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
+        "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"
+    ]:
+        return
+
+    if message.text.startswith("/redeem"):
+        await cmd_redeem_prompt(message)
         return
 
     is_sub, ch_id, ch_link = await check_channel_subscription(message.from_user.id, bot)
     if not is_sub:
+        lang = await get_user_language(message.from_user.id)
         text = (
-            "⚠️ **Botdan foydalanish uchun kanalimizga obuna bo'ling!**\n\n"
-            "Obuna bo'lgach, **✅ Obunani tekshirish** tugmasini bosing:"
+            "⚠️ **Botdan foydalanish uchun kanalimizga obuna bo'ling!**\n\nObuna bo'lgach, **✅ Obunani tekshirish** tugmasini bosing:" if lang == 'uz' else (
+            "⚠️ **Подпишитесь на наш канал, чтобы использовать бота!**\n\nПосле подписки нажмите **✅ Проверить подписку**:" if lang == 'ru' else
+            "⚠️ **Please subscribe to our channel to use the bot!**\n\nAfter subscribing, click **✅ Check Subscription**:")
         )
-        await message.answer(text, reply_markup=get_force_sub_keyboard(ch_link), parse_mode="Markdown")
+        await message.answer(text, reply_markup=get_force_sub_keyboard(ch_link, lang), parse_mode="Markdown")
         return
 
     platform, icon, url = detect_platform_and_url(message.text)
     if not url:
-        await message.answer("ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!")
+        lang = await get_user_language(message.from_user.id)
+        msg = "ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!" if lang == 'uz' else (
+            "ℹ️ Пожалуйста, отправьте мне ссылку на YouTube, TikTok, Instagram, Pinterest или Twitter!" if lang == 'ru' else
+            "ℹ️ Please send me a link from YouTube, TikTok, Instagram, Pinterest, or Twitter!")
+        await message.answer(msg)
         return
 
     can_download, current_usage = await check_daily_limit(message.from_user.id, free_limit=15)
     if not can_download:
-        await message.answer(
-            "⚠️ **Kunlik tekin yuklab olish limitiga yetdingiz! (15/15)**\n\n"
-            "Cheksiz yuklab olish uchun **Premium** tarifiga o'ting yoki ertagacha kuting. 😊",
-            parse_mode="Markdown"
-        )
+        lang = await get_user_language(message.from_user.id)
+        await message.answer(get_text("limit_exceeded", lang), parse_mode="Markdown")
         return
 
     user = await get_or_create_user(message.from_user.id)
@@ -276,6 +374,16 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
     await callback.message.delete()
     await process_and_send_media(callback.message, url, platform or "Media", icon or "📹", quality, bot)
     await callback.answer()
+
+async def check_and_notify_referral(user_id: int, bot_inst: Bot):
+    ref_id, coins_awarded = await verify_referral_activity(user_id)
+    if ref_id > 0:
+        try:
+            ref_lang = await get_user_language(ref_id)
+            ref_coins = await get_user_coins(ref_id)
+            await bot_inst.send_message(ref_id, get_text("ref_success_notice", ref_lang, coins=ref_coins), parse_mode="Markdown")
+        except Exception as e:
+            logger.warning(f"Could not notify referrer {ref_id}: {e}")
 
 async def process_and_send_media(message: types.Message, url: str, platform: str, icon: str, quality: str, bot_inst: Bot):
     user = await get_or_create_user(message.from_user.id)
@@ -325,6 +433,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                     title=title
                 )
                 await record_download(message.from_user.id, url, platform, "MP3")
+                await check_and_notify_referral(message.from_user.id, bot_inst)
                 if os.path.exists(mp3_file):
                     os.remove(mp3_file)
 
@@ -364,6 +473,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                     parse_mode="Markdown"
                 )
                 await record_download(message.from_user.id, url, platform, quality)
+                await check_and_notify_referral(message.from_user.id, bot_inst)
                 
                 if os.path.exists(file_path):
                     os.remove(file_path)
@@ -378,20 +488,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
 
 @dp.callback_query(F.data == "ref_info")
 async def cb_ref_info(callback: types.CallbackQuery, bot: Bot):
-    user_id = callback.from_user.id
-    bot_info = await bot.get_me()
-    ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
-    ref_count = await get_user_referrals(user_id)
-    
-    text = (
-        "🎁 **Bepul VIP Premium olish tizimi (Referal)**\n\n"
-        "Quyidagi shaxsiy taklif havolangizni do'stlaringizga, guruhlarga yoki kanallarga yuboring!\n\n"
-        f"🔗 **Sizning havolangiz:**\n`{ref_link}`\n\n"
-        f"👥 **Hozircha taklif qilganlaringiz:** {ref_count} ta\n\n"
-        "🎯 **Shart:** Har **3 nafar yangi do'stingiz** ushbu havola orqali botga kirganda, sizga avtomatik ravishda **7 kunlik ⭐ VIP Premium** taqdim etiladi (hech qanday limitsiz!)."
-    )
-    await callback.message.answer(text, parse_mode="Markdown")
-    await callback.answer()
+    await cmd_invite_center(callback, bot)
 
 @dp.callback_query(F.data == "buy_prem_stars")
 async def cb_buy_stars(callback: types.CallbackQuery):
