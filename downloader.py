@@ -82,9 +82,6 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         "ffmpeg_location": ffmpeg_path,
         # Disable cache to avoid stale session conflicts
         "cachedir": False,
-        # EJS: Enable external challenge solver scripts for YouTube n-signature
-        # Required since YouTube enforces JS challenges that pure Python cannot solve
-        "remote_components": "ejs:github",
         "extractor_args": {
             "youtube": {
                 "player_client": player_clients
@@ -95,8 +92,10 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         }
     }
 
+    # js_runtimes: pass as string "node:/path" (yt-dlp Python API format)
+    # yt-dlp-ejs package is installed and provides EJS scripts automatically
     if node_path:
-        ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
+        ydl_opts["js_runtimes"] = f"node:{node_path}"
 
     if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
         c_size = os.path.getsize(COOKIES_PATH)
