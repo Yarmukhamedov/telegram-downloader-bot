@@ -87,7 +87,7 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
     # IMPORTANT: Only 'web' and 'mweb' clients support cookies.
     # 'android' and 'ios' silently SKIP cookies — never include them in cookie-based calls.
     if not player_clients:
-        player_clients = ["default,-tv"]
+        player_clients = ["web", "mweb"]
 
     ydl_opts = {
         "format": format_spec,
@@ -348,18 +348,12 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     is_youtube = "youtube.com" in url or "youtu.be" in url
 
-    # Download strategy for 2026:
-    # Stage 1: default client WITHOUT cookies (let yt-dlp pick default client + bgutil POT handles proof of origin for public videos)
-    # Stage 2: mweb WITHOUT cookies (specifically use mweb + POT without attaching potentially expired cookies)
-    # Stage 3: mweb WITH cookies (for age-restricted/members-only videos, if valid cookies exist)
-    # Stage 4: web WITH cookies (fallback auth)
-    # Stage 5: Cobalt API fallback
+    # Download strategy requested by user:
+    # Use WEB clients ("web", "mweb") with cookies ALWAYS enabled for all videos (public or private).
+    # If formats are not mp4 directly, ffmpeg will automatically merge/convert to mp4.
 
     stages = [
-        {"clients": ["default,-tv"], "use_cookies": False, "label": "default (no cookies, POT enabled)"},
-        {"clients": ["mweb"], "use_cookies": False, "label": "mweb (no cookies, POT enabled)"},
-        {"clients": ["mweb"], "use_cookies": True, "label": "mweb+cookies+POT"},
-        {"clients": ["web"], "use_cookies": True, "label": "web+cookies+POT"},
+        {"clients": ["web", "mweb"], "use_cookies": True, "label": "web+cookies (official)"},
     ]
 
     last_exception = None
