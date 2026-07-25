@@ -19,7 +19,8 @@ from aiogram.client.telegram import TelegramAPIServer
 
 from database import (
     init_db, get_or_create_user, update_user_quality, record_download,
-    check_daily_limit, get_setting, get_admin_stats
+    check_daily_limit, get_setting, get_admin_stats, register_user_with_referral,
+    get_user_referrals, grant_premium
 )
 from downloader import (
     detect_platform_and_url, download_media, get_video_metadata,
@@ -28,7 +29,7 @@ from downloader import (
 )
 from keyboards import (
     get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
-    get_quality_selector_keyboard
+    get_quality_selector_keyboard, get_profile_keyboard, get_payment_receipt_keyboard
 )
 from admin import admin_router, get_admin_ids
 
@@ -48,6 +49,7 @@ if not BOT_TOKEN:
 dp = Dispatcher()
 dp.include_router(admin_router)
 url_cache = {}
+download_semaphore = asyncio.Semaphore(4)
 
 async def check_channel_subscription(user_id: int, bot_inst: Bot) -> tuple[bool, str, str]:
     admin_ids = get_admin_ids()
@@ -71,9 +73,43 @@ async def check_channel_subscription(user_id: int, bot_inst: Bot) -> tuple[bool,
     return False, ch_id, ch_link
 
 @dp.message(Command("start"))
-async def cmd_start(message: types.Message):
+async def cmd_start(message: types.Message, bot: Bot):
     logger.info(f">>> /start command received from user_id: {message.from_user.id} ({message.from_user.full_name})")
-    user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
+    args = message.text.split()
+    ref_id = None
+    if len(args) > 1 and args[1].startswith("ref_"):
+        try:
+            ref_id = int(args[1].replace("ref_", ""))
+        except ValueError:
+            pass
+
+    user, is_new, referrer_got_bonus = await register_user_with_referral(message.from_user.id, message.from_user.username, message.from_user.full_name, ref_id)
+    
+    if referrer_got_bonus > 0:
+        try:
+            await bot.send_message(
+                referrer_got_bonus,
+                "🎉 **Tabriklaymiz!**\n\n"
+                "Sizning referal havolangiz orqali **3 nafar** do'stingiz botga qo'shildi!\n"
+                "🎁 Sizga avtomatik ravishda **7 kunlik ⭐ VIP Premium** obuna taqdim etildi!\n\n"
+                "Cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning! 🚀",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.warning(f"Could not notify referrer {referrer_got_bonus}: {e}")
+    elif is_new and ref_id and ref_id != message.from_user.id:
+        try:
+            ref_count = await get_user_referrals(ref_id)
+            await bot.send_message(
+                ref_id,
+                f"👤 Sizning havolangiz orqali yangi do'stingiz ({message.from_user.first_name}) botga qo'shildi!\n"
+                f"📊 **Jami taklif qilinganlar:** {ref_count} ta.\n"
+                f"🎁 Yana {3 - (ref_count % 3)} kishi qo'shilsa, 7 kunlik VIP Premium olasiz!",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.warning(f"Could not notify referrer {ref_id}: {e}")
+
     admin_ids = get_admin_ids()
     is_admin = message.from_user.id in admin_ids
 
@@ -82,7 +118,7 @@ async def cmd_start(message: types.Message):
         f"Men YouTube, TikTok, Instagram, Pinterest va Twitter/X platformalaridan "
         f"videolarni 100% original hajmda hamda yuqori sifatda yuklab beruvchi botman! 🚀\n\n"
         f"⚡️ Shunchaki video havolasini menga yuboring!\n"
-        f"⚙️ Sukut bo'yicha yuklash sifatini **⚙️ Sozlamalar** bo'limida o'zgartirishingiz mumkin."
+        f"🎁 Bepul VIP olish yoki Tariflar bilan tanishish uchun **👤 Profil / Tarif** bo'limiga o'ting."
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(is_admin), parse_mode="Markdown")
 
@@ -121,9 +157,10 @@ async def cb_set_quality(callback: types.CallbackQuery):
 async def cmd_profile(message: types.Message):
     logger.info(f">>> Profil clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
+    ref_count = await get_user_referrals(message.from_user.id)
     
-    status_str = "⭐ Premium (Cheksiz)" if user['is_premium'] else "🆓 Bepul (Free)"
-    daily_limit = "Cheksiz" if user['is_premium'] else "15 ta / kun"
+    status_str = f"⭐ VIP Premium (gacha: {user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ VIP Premium (Cheksiz)" if user['is_premium'] else "🆓 Bepul (Free)")
+    daily_limit = "Cheksiz (Priority Navbat)" if user['is_premium'] else "15 ta / kun"
     
     q_map = {
         'best': "🎬 Eng yuqori (1080p / 4K)",
@@ -135,14 +172,16 @@ async def cmd_profile(message: types.Message):
     pref_q = q_map.get(user['preferred_quality'], "🎬 Eng yuqori")
 
     text = (
-        "👤 **Sizning Profilingiz**\n\n"
+        "👤 **Sizning Profilingiz va Tarif**\n\n"
         f"🆔 **ID:** `{user['user_id']}`\n"
         f"👤 **Ism:** {user['full_name']}\n"
-        f"📊 **Tarif:** {status_str}\n"
+        f"👑 **Tarifingiz:** {status_str}\n"
         f"📥 **Bugungi yuklashlar:** {user['daily_downloads']} / {daily_limit}\n"
         f"⚙️ **Tanlangan sifat:** {pref_q}\n"
+        f"👥 **Taklif qilgan do'stlaringiz:** {ref_count} ta\n\n"
+        "💎 *VIP Premium imtiyozlari:* Cheksiz yuklash, 1080p/4K sifat, navbatsiz super-tezkor yuklash va hech qanday reklamasiz!"
     )
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_profile_keyboard(), parse_mode="Markdown")
 
 @dp.message(F.text == "ℹ️ Yordam")
 async def cmd_help(message: types.Message):
@@ -234,6 +273,9 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
     await callback.answer()
 
 async def process_and_send_media(message: types.Message, url: str, platform: str, icon: str, quality: str, bot_inst: Bot):
+    user = await get_or_create_user(message.from_user.id)
+    is_vip = user['is_premium']
+
     status_msg = await message.answer(f"{icon} **{platform}** havolasi ishlanmoqda...")
     loop = asyncio.get_event_loop()
     
@@ -254,76 +296,220 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 except Exception:
                     pass
 
-    try:
-        os.makedirs("downloads", exist_ok=True)
-        await status_msg.edit_text(f"⏳ **{platform}** dan yuklab olinmoqda...")
-        
-        file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
-        title = video_info.get("title", f"{platform} Video")
+    if not is_vip and download_semaphore.locked():
+        await status_msg.edit_text("⏳ **Serverda yuklash navbati:** Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *VIP Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
 
-        bot_info = await bot_inst.get_me()
-
-        if quality == 'mp3' or file_path.endswith(".mp3"):
-            await status_msg.edit_text("🎵 MP3 audio fayl tayyorlanmoqda...")
-            mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
+    async with download_semaphore:
+        try:
+            os.makedirs("downloads", exist_ok=True)
+            await status_msg.edit_text(f"⏳ **{platform}** dan yuklab olinmoqda...")
             
-            audio = FSInputFile(mp3_file)
-            await message.answer_audio(
-                audio,
-                caption=f"🎵 {title}\n\n🤖 @{bot_info.username}",
-                title=title
-            )
-            await record_download(message.from_user.id, url, platform, "MP3")
-            if os.path.exists(mp3_file):
-                os.remove(mp3_file)
+            file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
+            title = video_info.get("title", f"{platform} Video")
 
-        else:
-            file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
-            
-            is_local_api = getattr(bot_inst, "_is_local_api", False) or (hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local)
-            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-            
-            if not is_local_api and file_size_mb > 49.0:
-                await status_msg.edit_text("⚡️ Video 50 MB dan katta. Telegram uchun sifatli siqilmoqda...")
-                file_path = await loop.run_in_executor(None, compress_video_to_target_size, file_path, 48.0)
+            bot_info = await bot_inst.get_me()
 
-            await status_msg.edit_text("✅ Tayyor! Telegram'ga yuborilmoqda...")
-            
-            width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
-            if not width or not height:
-                width = video_info.get("width")
-                height = video_info.get("height")
-            if not duration:
-                duration = video_info.get("duration")
+            if quality == 'mp3' or file_path.endswith(".mp3"):
+                await status_msg.edit_text("🎵 MP3 audio fayl tayyorlanmoqda...")
+                mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
+                
+                audio = FSInputFile(mp3_file)
+                await message.answer_audio(
+                    audio,
+                    caption=f"🎵 {title}\n\n🤖 @{bot_info.username}",
+                    title=title
+                )
+                await record_download(message.from_user.id, url, platform, "MP3")
+                if os.path.exists(mp3_file):
+                    os.remove(mp3_file)
 
-            thumb_file_path = os.path.splitext(file_path)[0] + "_thumb.jpg"
-            thumb_result = await loop.run_in_executor(None, create_video_thumbnail, file_path, thumb_file_path)
+            else:
+                file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
+                
+                is_local_api = getattr(bot_inst, "_is_local_api", False) or (hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local)
+                file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                
+                if not is_local_api and file_size_mb > 49.0:
+                    await status_msg.edit_text("⚡️ Video 50 MB dan katta. Telegram uchun sifatli siqilmoqda...")
+                    file_path = await loop.run_in_executor(None, compress_video_to_target_size, file_path, 48.0)
 
-            video = FSInputFile(file_path)
-            thumbnail = FSInputFile(thumb_result) if thumb_result else None
+                await status_msg.edit_text("✅ Tayyor! Telegram'ga yuborilmoqda...")
+                
+                width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
+                if not width or not height:
+                    width = video_info.get("width")
+                    height = video_info.get("height")
+                if not duration:
+                    duration = video_info.get("duration")
 
-            await message.answer_video(
-                video,
-                caption=f"{icon} **{title}**\n\n🤖 @{bot_info.username}",
-                width=width,
-                height=height,
-                duration=int(duration) if duration else None,
-                thumbnail=thumbnail,
-                supports_streaming=True,
+                thumb_file_path = os.path.splitext(file_path)[0] + "_thumb.jpg"
+                thumb_result = await loop.run_in_executor(None, create_video_thumbnail, file_path, thumb_file_path)
+
+                video = FSInputFile(file_path)
+                thumbnail = FSInputFile(thumb_result) if thumb_result else None
+
+                await message.answer_video(
+                    video,
+                    caption=f"{icon} **{title}**\n\n🤖 @{bot_info.username}",
+                    width=width,
+                    height=height,
+                    duration=int(duration) if duration else None,
+                    thumbnail=thumbnail,
+                    supports_streaming=True,
+                    parse_mode="Markdown"
+                )
+                await record_download(message.from_user.id, url, platform, quality)
+                
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                if thumb_result and os.path.exists(thumb_result):
+                    os.remove(thumb_result)
+
+            await status_msg.delete()
+
+        except Exception as e:
+            logger.error(f"Error downloading {url}: {e}")
+            await status_msg.edit_text(f"❌ Yuklab olishda xatolik yuz berdi: {str(e)}")
+
+@dp.callback_query(F.data == "ref_info")
+async def cb_ref_info(callback: types.CallbackQuery, bot: Bot):
+    user_id = callback.from_user.id
+    bot_info = await bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
+    ref_count = await get_user_referrals(user_id)
+    
+    text = (
+        "🎁 **Bepul VIP Premium olish tizimi (Referal)**\n\n"
+        "Quyidagi shaxsiy taklif havolangizni do'stlaringizga, guruhlarga yoki kanallarga yuboring!\n\n"
+        f"🔗 **Sizning havolangiz:**\n`{ref_link}`\n\n"
+        f"👥 **Hozircha taklif qilganlaringiz:** {ref_count} ta\n\n"
+        "🎯 **Shart:** Har **3 nafar yangi do'stingiz** ushbu havola orqali botga kirganda, sizga avtomatik ravishda **7 kunlik ⭐ VIP Premium** taqdim etiladi (hech qanday limitsiz!)."
+    )
+    await callback.message.answer(text, parse_mode="Markdown")
+    await callback.answer()
+
+@dp.callback_query(F.data == "buy_prem_stars")
+async def cb_buy_stars(callback: types.CallbackQuery):
+    prices = [types.LabeledPrice(label="⭐ 30 kun VIP Premium", amount=50)]
+    await callback.message.answer_invoice(
+        title="⭐ VIP Premium (30 kun)",
+        description="Cheksiz yuklash, 1080p/4K sifat, navbatsiz super-tezkor yuklash va hech qanday reklamasiz!",
+        payload="prem_30_days",
+        provider_token="",
+        currency="XTR",
+        prices=prices
+    )
+    await callback.answer()
+
+@dp.pre_checkout_query()
+async def pre_checkout_handler(pre_checkout_query: types.PreCheckoutQuery):
+    await pre_checkout_query.answer(ok=True)
+
+@dp.message(F.successful_payment)
+async def successful_payment_handler(message: types.Message):
+    user_id = message.from_user.id
+    await grant_premium(user_id, 30)
+    await message.answer(
+        "🎉 **Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.**\n\n"
+        "Sizga **30 kunlik ⭐ VIP Premium** obuna taqdim etildi!\n"
+        "Endi cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning. 🚀",
+        parse_mode="Markdown"
+    )
+
+@dp.callback_query(F.data == "buy_prem_card")
+async def cb_buy_card(callback: types.CallbackQuery):
+    text = (
+        "💳 **Karta orqali to'lov (Click / Payme / Uzcard / Humo)**\n\n"
+        "⭐ 1 oy VIP Premium narxi: **15,000 so'm**\n"
+        "💳 Karta raqam: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n"
+        "📝 **To'lovni tasdiqlash uchun:** To'lovni amalga oshirgach, to'lov cheki rasmini (skrinshotini) darhol shu yerga yuboring! "
+        "Adminlarimiz chekni tekshirib, bir necha daqiqada sizga VIP tarifni yoqib berishadi."
+    )
+    await callback.message.answer(text, parse_mode="Markdown")
+    await callback.answer()
+
+@dp.message(F.photo)
+async def handle_photo_receipt(message: types.Message, bot: Bot):
+    user_id = message.from_user.id
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+    admin_ids = get_admin_ids()
+    
+    if not admin_ids:
+        await message.answer("⚠️ Hozircha adminlar tayinlanmagan.")
+        return
+
+    await message.answer("✅ To'lov chekingiz adminlarga yuborildi! Tekshirib tez orada VIP tarifni aktivlashtiramiz. Rahmat! 😊")
+
+    caption = (
+        "💳 **Yangi to'lov cheki (Karta / Click)**\n\n"
+        f"👤 **Foydalanuvchi:** {username} (`{user_id}`)\n"
+        f"🆔 **ID:** `{user_id}`\n\n"
+        "To'lovni tasdiqlab, 30 kunlik VIP berishni xohlaysizmi?"
+    )
+    for admin_id in admin_ids:
+        try:
+            await bot.send_photo(
+                chat_id=admin_id,
+                photo=message.photo[-1].file_id,
+                caption=caption,
+                reply_markup=get_payment_receipt_keyboard(user_id),
                 parse_mode="Markdown"
             )
-            await record_download(message.from_user.id, url, platform, quality)
-            
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            if thumb_result and os.path.exists(thumb_result):
-                os.remove(thumb_result)
+        except Exception as e:
+            logger.warning(f"Could not forward receipt to admin {admin_id}: {e}")
 
-        await status_msg.delete()
-
+@dp.callback_query(F.data.startswith("verify_prem:"))
+async def cb_verify_prem(callback: types.CallbackQuery, bot: Bot):
+    admin_ids = get_admin_ids()
+    if callback.from_user.id not in admin_ids:
+        await callback.answer("❌ Bu tugma faqat adminlar uchun!", show_alert=True)
+        return
+        
+    parts = callback.data.split(":")
+    target_user_id = int(parts[1])
+    days = int(parts[2]) if len(parts) > 2 else 30
+    
+    await grant_premium(target_user_id, days)
+    await callback.message.edit_caption(
+        caption=f"✅ **Tasdiqlandi!** `{target_user_id}` foydalanuvchiga {days} kunlik VIP Premium berildi.",
+        parse_mode="Markdown"
+    )
+    await callback.answer("✅ VIP Premium berildi!")
+    
+    try:
+        await bot.send_message(
+            target_user_id,
+            f"🎉 **Tabriklaymiz! To'lov chekingiz admin tomonidan tasdiqlandi!**\n\n"
+            f"Sizga **{days} kunlik ⭐ VIP Premium** obuna yoqildi!\n"
+            "Endi cheksiz va super sifatli yuklashdan rohatlaning. 🚀",
+            parse_mode="Markdown"
+        )
     except Exception as e:
-        logger.error(f"Error downloading {url}: {e}")
-        await status_msg.edit_text(f"❌ Yuklab olishda xatolik yuz berdi: {str(e)}")
+        logger.warning(f"Could not notify user {target_user_id} of premium verification: {e}")
+
+@dp.callback_query(F.data.startswith("reject_prem:"))
+async def cb_reject_prem(callback: types.CallbackQuery, bot: Bot):
+    admin_ids = get_admin_ids()
+    if callback.from_user.id not in admin_ids:
+        await callback.answer("❌ Bu tugma faqat adminlar uchun!", show_alert=True)
+        return
+        
+    target_user_id = int(callback.data.split(":")[1])
+    await callback.message.edit_caption(
+        caption=f"❌ **Rad etildi!** `{target_user_id}` foydalanuvchi cheki qabul qilinmadi.",
+        parse_mode="Markdown"
+    )
+    await callback.answer("❌ Rad etildi!")
+    
+    try:
+        await bot.send_message(
+            target_user_id,
+            "❌ **To'lov chekingiz tasdiqlanmadi.**\n\n"
+            "Iltimos, to'g'ri chek yuborganingizga ishonch hosil qiling yoki savollar bo'yicha adminga murojaat qiling.",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        logger.warning(f"Could not notify user {target_user_id} of rejection: {e}")
 
 @dp.inline_query()
 async def inline_search_handler(inline_query: types.InlineQuery):
@@ -395,11 +581,31 @@ async def create_bot_instance() -> Bot:
         bot_inst._is_local_api = False
         return bot_inst
 
+async def cleanup_old_downloads():
+    while True:
+        try:
+            await asyncio.sleep(3600)  # Run every 1 hour
+            if os.path.exists("downloads"):
+                now = time.time()
+                for fname in os.listdir("downloads"):
+                    fpath = os.path.join("downloads", fname)
+                    if os.path.isfile(fpath) and now - os.path.getmtime(fpath) > 3600:
+                        try:
+                            os.remove(fpath)
+                            logger.info(f"🧹 Deleted stale temp file: {fpath}")
+                        except Exception:
+                            pass
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning(f"Error in cleanup task: {e}")
+
 async def main():
     logger.info("Initializing database...")
     await init_db()
     
     bot_instance = await create_bot_instance()
+    cleanup_task = asyncio.create_task(cleanup_old_downloads())
     try:
         await bot_instance.delete_webhook(drop_pending_updates=True)
         bot_info = await bot_instance.get_me()
@@ -409,6 +615,8 @@ async def main():
     except Exception as e:
         logger.error(f"❌ Error during bot polling startup: {e}")
         raise e
+    finally:
+        cleanup_task.cancel()
 
 if __name__ == "__main__":
     while True:

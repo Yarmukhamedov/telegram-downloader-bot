@@ -20,7 +20,9 @@ async def init_db():
                 premium_until TEXT,
                 daily_downloads INTEGER DEFAULT 0,
                 last_download_date TEXT,
-                joined_at TEXT
+                joined_at TEXT,
+                referred_by INTEGER DEFAULT NULL,
+                referral_count INTEGER DEFAULT 0
             )
         """)
         await db.execute("""
@@ -39,12 +41,29 @@ async def init_db():
                 value TEXT
             )
         """)
+        # Safe migrations for existing DB
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL")
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0")
+        except Exception:
+            pass
         await db.commit()
     logger.info("Database initialized successfully.")
 
-async def get_or_create_user(user_id: int, username: str = None, full_name: str = None) -> dict:
+async def get_user_referrals(user_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT referral_count FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] is not None else 0
+
+async def register_user_with_referral(user_id: int, username: str = None, full_name: str = None, ref_id: int = None) -> tuple[dict, bool, int]:
     today_str = date.today().isoformat()
     now_str = datetime.now().isoformat()
+    is_new = False
+    referrer_got_bonus = 0
 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -52,16 +71,30 @@ async def get_or_create_user(user_id: int, username: str = None, full_name: str 
             user = await cursor.fetchone()
 
         if not user:
+            is_new = True
+            valid_ref_id = None
+            if ref_id and ref_id != user_id:
+                async with db.execute("SELECT user_id, referral_count FROM users WHERE user_id = ?", (ref_id,)) as r_cur:
+                    ref_row = await r_cur.fetchone()
+                if ref_row:
+                    valid_ref_id = ref_id
+                    new_count = (ref_row['referral_count'] or 0) + 1
+                    await db.execute("UPDATE users SET referral_count = ? WHERE user_id = ?", (new_count, ref_id))
+                    if new_count > 0 and new_count % 3 == 0:
+                        until_dt = datetime.now() + timedelta(days=7)
+                        until_str = until_dt.isoformat()
+                        await db.execute("UPDATE users SET is_premium = 1, premium_until = ? WHERE user_id = ?", (until_str, ref_id))
+                        referrer_got_bonus = ref_id
+
             await db.execute("""
-                INSERT INTO users (user_id, username, full_name, preferred_quality, is_premium, daily_downloads, last_download_date, joined_at)
-                VALUES (?, ?, ?, 'best', 0, 0, ?, ?)
-            """, (user_id, username, full_name, today_str, now_str))
+                INSERT INTO users (user_id, username, full_name, preferred_quality, is_premium, daily_downloads, last_download_date, joined_at, referred_by, referral_count)
+                VALUES (?, ?, ?, 'best', 0, 0, ?, ?, ?, 0)
+            """, (user_id, username, full_name, today_str, now_str, valid_ref_id))
             await db.commit()
             
             async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
                 user = await cursor.fetchone()
         else:
-            # Update username/full_name if changed
             if username != user['username'] or full_name != user['full_name']:
                 await db.execute("UPDATE users SET username = ?, full_name = ? WHERE user_id = ?", (username, full_name, user_id))
                 await db.commit()
@@ -83,7 +116,7 @@ async def get_or_create_user(user_id: int, username: str = None, full_name: str 
         else:
             daily_downloads = user['daily_downloads']
 
-        return {
+        user_dict = {
             "user_id": user['user_id'],
             "username": user['username'],
             "full_name": user['full_name'],
@@ -91,8 +124,15 @@ async def get_or_create_user(user_id: int, username: str = None, full_name: str 
             "is_premium": bool(is_premium),
             "premium_until": user['premium_until'],
             "daily_downloads": daily_downloads,
-            "joined_at": user['joined_at']
+            "joined_at": user['joined_at'],
+            "referred_by": user['referred_by'],
+            "referral_count": user['referral_count'] or 0
         }
+        return user_dict, is_new, referrer_got_bonus
+
+async def get_or_create_user(user_id: int, username: str = None, full_name: str = None) -> dict:
+    user_dict, _, _ = await register_user_with_referral(user_id, username, full_name, None)
+    return user_dict
 
 async def update_user_quality(user_id: int, quality: str):
     async with aiosqlite.connect(DB_PATH) as db:

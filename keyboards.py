@@ -61,3 +61,20 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_profile_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(text="🎁 Bepul VIP olish (Do'stlarga taklif)", callback_data="ref_info")],
+        [InlineKeyboardButton(text="⭐ Telegram Stars bilan (50 ⭐ / 30 kun)", callback_data="buy_prem_stars")],
+        [InlineKeyboardButton(text="💳 Karta orqali (Click / Payme)", callback_data="buy_prem_card")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_payment_receipt_keyboard(user_id: int) -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="✅ Tasdiqlash (30 kun VIP)", callback_data=f"verify_prem:{user_id}:30"),
+            InlineKeyboardButton(text="❌ Rad etish", callback_data=f"reject_prem:{user_id}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
