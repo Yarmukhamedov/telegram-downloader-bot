@@ -1,0 +1,18 @@
+# Security & Sensitive Configs
+cookies.txt
+.env
+*.db
+bot_database.db
+
+# Data & Runtime Storage
+data/
+downloads/
+*.log
+
+# Python & System
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.DS_Store
