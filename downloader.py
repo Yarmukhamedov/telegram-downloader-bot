@@ -327,20 +327,29 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     is_youtube = "youtube.com" in url or "youtu.be" in url
 
-    # CRITICAL: Only web/mweb clients support cookies.
-    # Attempt 1: web + mweb with cookies (highest quality)
-    # Attempt 2: web only (sometimes mweb causes format issues)
-    # Attempt 3: Cobalt API fallback for YouTube
-    client_chains = [
-        ["web", "mweb"],
-        ["web"],
+    # Download strategy:
+    # Stage 1 (NO n-sig needed): android_vr / ios / android — works for ALL public YouTube videos
+    #   - These clients bypass n-signature challenge entirely
+    #   - No cookies needed for public videos
+    # Stage 2 (n-sig required): web + mweb + cookies — for age-restricted / members-only videos
+    # Stage 3: Cobalt API fallback
+
+    stages = [
+        # Stage 1: No n-sig clients (public videos — most common case)
+        {"clients": ["android_vr", "ios", "android"], "use_cookies": False, "label": "android/ios (no n-sig)"},
+        # Stage 2: Web client with cookies (auth-required videos)
+        {"clients": ["web", "mweb"],                  "use_cookies": True,  "label": "web+cookies (auth)"},
     ]
 
     last_exception = None
-    for idx, clients in enumerate(client_chains, start=1):
+    for idx, stage in enumerate(stages, start=1):
         try:
-            logger.info(f"⏳ Download attempt {idx} with player clients: {clients}...")
-            ydl_opts = get_base_ydl_opts(quality=quality, use_cookies=True, player_clients=clients)
+            logger.info(f"⏳ Stage {idx} [{stage['label']}] download attempt...")
+            ydl_opts = get_base_ydl_opts(
+                quality=quality,
+                use_cookies=stage["use_cookies"],
+                player_clients=stage["clients"]
+            )
             ydl_opts["logger"] = MyLogger()
             ydl_opts["outtmpl"] = "downloads/%(id)s.%(ext)s"
             if progress_fn:
@@ -351,13 +360,13 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
                 filename = ydl.prepare_filename(info)
                 mp4_path = os.path.splitext(filename)[0] + ".mp4"
                 final_file = mp4_path if os.path.exists(mp4_path) else filename
-                logger.info(f"✅ Download SUCCESS with clients {clients}: {final_file}")
+                logger.info(f"✅ Download SUCCESS at stage {idx} [{stage['label']}]: {final_file}")
                 return final_file, info
         except Exception as e:
-            logger.warning(f"Download attempt {idx} with clients {clients} failed: {e}")
+            logger.warning(f"Stage {idx} [{stage['label']}] failed: {e}")
             last_exception = e
 
-    # Cobalt API fallback for YouTube when yt-dlp is fully blocked
+    # Stage 3: Cobalt API fallback for YouTube
     if is_youtube:
         try:
             return download_via_cobalt_fallback(url, quality)
@@ -365,3 +374,4 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
             logger.error(f"Cobalt fallback failed: {cob_err}")
 
     raise last_exception
+
