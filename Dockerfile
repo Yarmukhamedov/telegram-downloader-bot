@@ -27,8 +27,11 @@ RUN git clone https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/b
     && npm install \
     && npx tsc
 
-# ПРЕДУСТАНОВКА EJS компонентов (Signature Solver)
-RUN yt-dlp --remote-components ejs:github --version
+# Install yt-dlp-ejs (EJS challenge solver package - required for YouTube n-sig)
+RUN pip install --no-cache-dir yt-dlp-ejs
+
+# Pre-download EJS components from GitHub (cached in image)
+RUN yt-dlp --remote-components ejs:github --version || true
 
 # Копируем остальные файлы проекта
 COPY . .

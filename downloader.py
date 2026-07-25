@@ -82,6 +82,9 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         "ffmpeg_location": ffmpeg_path,
         # Disable cache to avoid stale session conflicts
         "cachedir": False,
+        # EJS: Enable external challenge solver scripts for YouTube n-signature
+        # Required since YouTube enforces JS challenges that pure Python cannot solve
+        "remote_components": "ejs:github",
         "extractor_args": {
             "youtube": {
                 "player_client": player_clients
