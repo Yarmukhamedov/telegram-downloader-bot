@@ -78,7 +78,7 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
         },
         "extractor_args": {
             "youtube": {
-                "player_client": ["android_vr", "tv_embedded", "ios", "mweb"]
+                "player_client": ["web", "mweb", "android", "ios"]
             }
         },
         "postprocessor_args": {
@@ -90,7 +90,11 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True):
         ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
 
     if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+        c_size = os.path.getsize(COOKIES_PATH)
+        logger.info(f"🍪 Active Cookies File Loaded: {COOKIES_PATH} (Size: {c_size} bytes)")
         ydl_opts["cookiefile"] = COOKIES_PATH
+    else:
+        logger.warning(f"⚠️ Cookies file not found or empty at: {COOKIES_PATH}")
 
     return ydl_opts
 
@@ -288,12 +292,12 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
             final_file = mp4_path if os.path.exists(mp4_path) else filename
             return final_file, info
     except Exception as e:
-        logger.warning(f"Primary download failed: {e}. Trying fallback with android_vr & tv_embedded...")
+        logger.warning(f"Primary download failed: {e}. Trying fallback with cookies preserved...")
         
-        ydl_opts_fallback = get_base_ydl_opts(quality=quality, use_cookies=False)
+        ydl_opts_fallback = get_base_ydl_opts(quality=quality, use_cookies=True)
         ydl_opts_fallback["extractor_args"] = {
             "youtube": {
-                "player_client": ["android_vr", "tv_embedded"]
+                "player_client": ["android", "ios", "mweb"]
             }
         }
         ydl_opts_fallback["logger"] = MyLogger()
