@@ -57,26 +57,30 @@ class MyLogger:
 def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_clients: list = None):
     ffmpeg_path = get_ffmpeg_path()
     node_path = shutil.which("node")
-    
+
     if quality == '720p':
-        format_spec = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+        format_spec = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best"
     elif quality == '480p':
-        format_spec = "bestvideo[height<=480]+bestaudio/best[height<=480]/best"
+        format_spec = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best"
     elif quality == 'mp3':
         format_spec = "bestaudio/best"
     else:
-        format_spec = "bestvideo+bestaudio/bestvideo/best/bv*+ba/b/best/mp4"
+        # Best quality: prefer mp4 container, fallback to any
+        format_spec = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
 
+    # IMPORTANT: Only 'web' and 'mweb' clients support cookies.
+    # 'android' and 'ios' silently SKIP cookies — never include them in cookie-based calls.
     if not player_clients:
-        player_clients = ["web", "mweb", "android", "ios"]
+        player_clients = ["web", "mweb"]
 
     ydl_opts = {
         "format": format_spec,
-        "format_sort": ["res", "ext:mp4:m4a", "hasvid", "hasaud"],
+        "format_sort": ["res:1080", "ext:mp4:m4a"],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
-        "cachedir": os.path.join(PROJECT_ROOT, ".cache"),
+        # Disable cache to avoid stale session conflicts
+        "cachedir": False,
         "extractor_args": {
             "youtube": {
                 "player_client": player_clients
@@ -94,6 +98,8 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         c_size = os.path.getsize(COOKIES_PATH)
         logger.info(f"🍪 Active Cookies File Loaded: {COOKIES_PATH} (Size: {c_size} bytes)")
         ydl_opts["cookiefile"] = COOKIES_PATH
+    else:
+        logger.warning(f"⚠️ No cookies file found at {COOKIES_PATH} — downloads may be blocked by YouTube!")
 
     return ydl_opts
 
@@ -319,11 +325,17 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
     raise Exception("All Cobalt API fallback endpoints failed")
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
+    is_youtube = "youtube.com" in url or "youtu.be" in url
+
+    # CRITICAL: Only web/mweb clients support cookies.
+    # Attempt 1: web + mweb with cookies (highest quality)
+    # Attempt 2: web only (sometimes mweb causes format issues)
+    # Attempt 3: Cobalt API fallback for YouTube
     client_chains = [
-        ["web", "mweb", "android", "ios"],
-        ["tv", "android_vr"],
+        ["web", "mweb"],
+        ["web"],
     ]
-    
+
     last_exception = None
     for idx, clients in enumerate(client_chains, start=1):
         try:
@@ -339,12 +351,14 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
                 filename = ydl.prepare_filename(info)
                 mp4_path = os.path.splitext(filename)[0] + ".mp4"
                 final_file = mp4_path if os.path.exists(mp4_path) else filename
+                logger.info(f"✅ Download SUCCESS with clients {clients}: {final_file}")
                 return final_file, info
         except Exception as e:
             logger.warning(f"Download attempt {idx} with clients {clients} failed: {e}")
             last_exception = e
 
-    if "youtube" in url or "youtu.be" in url:
+    # Cobalt API fallback for YouTube when yt-dlp is fully blocked
+    if is_youtube:
         try:
             return download_via_cobalt_fallback(url, quality)
         except Exception as cob_err:
