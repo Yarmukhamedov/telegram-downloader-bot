@@ -92,10 +92,10 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         }
     }
 
-    # js_runtimes: pass as string "node:/path" (yt-dlp Python API format)
-    # yt-dlp-ejs package is installed and provides EJS scripts automatically
+    # js_runtimes: must be a dict of {runtime: {config}} per yt-dlp Python API
+    # yt-dlp-ejs package provides the EJS scripts automatically
     if node_path:
-        ydl_opts["js_runtimes"] = f"node:{node_path}"
+        ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
 
     if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
         c_size = os.path.getsize(COOKIES_PATH)
