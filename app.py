@@ -462,9 +462,10 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 video = FSInputFile(file_path)
                 thumbnail = FSInputFile(thumb_result) if thumb_result else None
 
+                res_str = f" | 🎬 **Sifat:** {height}p" if height else ""
                 await message.answer_video(
                     video,
-                    caption=f"{icon} **{title}**\n\n🤖 @{bot_info.username}",
+                    caption=f"{icon} **{title}**\n💾 **Hajm:** {file_size_mb:.1f} MB{res_str}\n\n🤖 @{bot_info.username}",
                     width=width,
                     height=height,
                     duration=int(duration) if duration else None,

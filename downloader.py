@@ -397,7 +397,13 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
                 filename = ydl.prepare_filename(info)
                 mp4_path = os.path.splitext(filename)[0] + ".mp4"
                 final_file = mp4_path if os.path.exists(mp4_path) else filename
-                logger.info(f"✅ Download SUCCESS at {stage['label']}: {final_file}")
+                dl_height = info.get("height") or 0
+                if not dl_height and "requested_formats" in info:
+                    for rf in info["requested_formats"]:
+                        if rf.get("vcodec") != "none" and rf.get("height"):
+                            dl_height = rf.get("height")
+                            break
+                logger.info(f"✅ Download SUCCESS at {stage['label']}: {final_file} (Resolution: {dl_height}p)")
                 return final_file, info
         except Exception as e:
             logger.warning(f"{stage['label']} failed: {e}")
