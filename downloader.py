@@ -348,18 +348,20 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     is_youtube = "youtube.com" in url or "youtu.be" in url
 
-    # Download strategy requested by user:
-    # Use WEB clients ("web", "mweb") with cookies ALWAYS enabled for all videos (public or private).
-    # If formats are not mp4 directly, ffmpeg will automatically merge/convert to mp4.
-
+    # Download strategy requested by user for Beta:
+    # Stage 1: web+cookies (official). If resolution < 1080p on 'best', try Stage 2.
+    # Stage 2: PO Token & Advanced clients (web_creator, tv_embedded) for Full HD/4K.
+    # Stage 3: Fallback back to web+cookies if Stage 2 fails.
     stages = [
-        {"clients": ["web", "mweb"], "use_cookies": True, "label": "web+cookies (official)"},
+        {"clients": ["web", "mweb"], "use_cookies": True, "label": "Stage 1 [web+cookies (official)]", "check_hd": True},
+        {"clients": ["web_creator", "tv_embedded", "web_safari", "web", "mweb"], "use_cookies": True, "label": "Stage 2 [PO Token & Advanced Clients (Full HD/4K)]", "check_hd": False},
+        {"clients": ["web", "mweb"], "use_cookies": True, "label": "Stage 3 [web+cookies fallback]", "check_hd": False}
     ]
 
     last_exception = None
     for idx, stage in enumerate(stages, start=1):
         try:
-            logger.info(f"⏳ Stage {idx} [{stage['label']}] download attempt...")
+            logger.info(f"⏳ Attempting {stage['label']}...")
             ydl_opts = get_base_ydl_opts(
                 quality=quality,
                 use_cookies=stage["use_cookies"],
@@ -371,17 +373,27 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
                 ydl_opts["progress_hooks"] = [progress_fn]
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                if stage["check_hd"] and is_youtube and quality == 'best':
+                    try:
+                        info_preview = ydl.extract_info(url, download=False)
+                        height = info_preview.get("height", 0) or 0
+                        if 0 < height < 1080:
+                            logger.warning(f"⚠️ Stage 1 max resolution is only {height}p (< 1080p). Escalating to Stage 2 for Full HD/4K...")
+                            continue
+                    except Exception as prev_err:
+                        logger.warning(f"Preview check failed: {prev_err}. Proceeding with Stage 1 download...")
+
                 info = ydl.extract_info(url, download=True)
                 filename = ydl.prepare_filename(info)
                 mp4_path = os.path.splitext(filename)[0] + ".mp4"
                 final_file = mp4_path if os.path.exists(mp4_path) else filename
-                logger.info(f"✅ Download SUCCESS at stage {idx} [{stage['label']}]: {final_file}")
+                logger.info(f"✅ Download SUCCESS at {stage['label']}: {final_file}")
                 return final_file, info
         except Exception as e:
-            logger.warning(f"Stage {idx} [{stage['label']}] failed: {e}")
+            logger.warning(f"{stage['label']} failed: {e}")
             last_exception = e
 
-    # Stage 3: Cobalt API fallback for YouTube
+    # Stage 4: Cobalt API fallback for YouTube
     if is_youtube:
         try:
             return download_via_cobalt_fallback(url, quality)

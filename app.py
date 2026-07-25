@@ -673,13 +673,14 @@ async def create_bot_instance() -> Bot:
     if chosen_api_url:
         logger.info(f"🚀 ✅ SUCCESS: Connected to Local Telegram Bot API Server at: {chosen_api_url} (2GB Mode Active!)")
         api = TelegramAPIServer.from_base(chosen_api_url, is_local=True)
-        session = AiohttpSession(api=api)
+        session = AiohttpSession(api=api, timeout=600)
         bot_inst = Bot(token=BOT_TOKEN, session=session)
         bot_inst._is_local_api = True
         return bot_inst
     else:
         logger.info("🌐 Using Standard Telegram API")
-        bot_inst = Bot(token=BOT_TOKEN)
+        session = AiohttpSession(timeout=600)
+        bot_inst = Bot(token=BOT_TOKEN, session=session)
         bot_inst._is_local_api = False
         return bot_inst
 
