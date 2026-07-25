@@ -56,7 +56,6 @@ class MyLogger:
 
 def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_clients: list = None):
     ffmpeg_path = get_ffmpeg_path()
-    node_path = shutil.which("node")
 
     if quality == '720p':
         # Don't restrict by ext — let yt-dlp pick any container, ffmpeg will merge to mp4
@@ -92,10 +91,9 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
         }
     }
 
-    # js_runtimes: must be a dict of {runtime: {config}} per yt-dlp Python API
-    # yt-dlp-ejs package provides the EJS scripts automatically
-    if node_path:
-        ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
+    # Node.js is installed in PATH via Dockerfile (nodesource setup_20.x)
+    # yt-dlp auto-detects it from PATH — no need to pass js_runtimes manually
+    # yt-dlp-ejs package provides the EJS challenge solver scripts automatically
 
     if use_cookies and os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
         c_size = os.path.getsize(COOKIES_PATH)
