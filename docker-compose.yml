@@ -25,9 +25,11 @@ services:
       - .env
     environment:
       - BOT_API_SERVER=http://telegram-bot-api:8081
+      - DB_PATH=/app/data/bot_database.db
     volumes:
       - ./downloads:/app/downloads
       - ./cookies.txt:/app/cookies.txt
+      - ./data:/app/data
 
 volumes:
   telegram-bot-api-data:

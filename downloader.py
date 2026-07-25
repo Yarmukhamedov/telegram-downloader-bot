@@ -58,29 +58,50 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
     ffmpeg_path = get_ffmpeg_path()
 
     if quality == '720p':
-        # Don't restrict by ext — let yt-dlp pick any container, ffmpeg will merge to mp4
-        format_spec = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+        format_spec = (
+            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]"
+            "/bestvideo[height<=720]+bestaudio"
+            "/best[height<=720][ext=mp4]"
+            "/best[height<=720]"
+            "/best"
+        )
     elif quality == '480p':
-        format_spec = "bestvideo[height<=480]+bestaudio/best[height<=480]/best"
+        format_spec = (
+            "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]"
+            "/bestvideo[height<=480]+bestaudio"
+            "/best[height<=480][ext=mp4]"
+            "/best[height<=480]"
+            "/best"
+        )
     elif quality == 'mp3':
-        format_spec = "bestaudio/best"
+        format_spec = "bestaudio[ext=m4a]/bestaudio/best"
     else:
-        # Best quality — NO container restriction, ffmpeg merges everything to mp4
-        format_spec = "bestvideo+bestaudio/best"
+        # Best quality — fallback chain from merged mp4 to any container
+        format_spec = (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]"
+            "/bestvideo+bestaudio"
+            "/best[ext=mp4]"
+            "/best"
+        )
 
     # IMPORTANT: Only 'web' and 'mweb' clients support cookies.
     # 'android' and 'ios' silently SKIP cookies — never include them in cookie-based calls.
     if not player_clients:
-        player_clients = ["web", "mweb"]
+        player_clients = ["mweb", "web"]
 
     ydl_opts = {
         "format": format_spec,
-        "format_sort": ["res:1080", "ext:mp4:m4a"],
+        "format_sort": ["res", "ext:mp4:m4a", "codec:h264:aac"],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
         # Disable cache to avoid stale session conflicts
         "cachedir": False,
+        "js_runtimes": {"node": {}},
+        "remote_components": {"ejs:github", "ejs:npm"},
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        },
         "extractor_args": {
             "youtube": {
                 "player_client": player_clients
@@ -327,18 +348,16 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     is_youtube = "youtube.com" in url or "youtu.be" in url
 
-    # Download strategy:
-    # Stage 1 (NO n-sig needed): android_vr / ios / android — works for ALL public YouTube videos
-    #   - These clients bypass n-signature challenge entirely
-    #   - No cookies needed for public videos
-    # Stage 2 (n-sig required): web + mweb + cookies — for age-restricted / members-only videos
-    # Stage 3: Cobalt API fallback
+    # Download strategy for 2026:
+    # Stage 1: mweb + cookies — official yt-dlp recommendation; bgutil POT provider plugin automatically handles PO Token
+    # Stage 2: tv_embedded — currently does not require PO Token, excellent fallback for high quality
+    # Stage 3: web + cookies — full web client with bgutil POT support
+    # Stage 4: Cobalt API fallback
 
     stages = [
-        # Stage 1: No n-sig clients (public videos — most common case)
-        {"clients": ["android_vr", "ios", "android"], "use_cookies": False, "label": "android/ios (no n-sig)"},
-        # Stage 2: Web client with cookies (auth-required videos)
-        {"clients": ["web", "mweb"],                  "use_cookies": True,  "label": "web+cookies (auth)"},
+        {"clients": ["mweb"], "use_cookies": True, "label": "mweb+cookies+POT (recommended)"},
+        {"clients": ["tv_embedded"], "use_cookies": False, "label": "tv_embedded (no POT needed)"},
+        {"clients": ["web"], "use_cookies": True, "label": "web+cookies+POT"},
     ]
 
     last_exception = None

@@ -4,7 +4,9 @@ import logging
 from datetime import datetime, date, timedelta
 
 logger = logging.getLogger(__name__)
-DB_PATH = "bot_database.db"
+DB_PATH = os.getenv("DB_PATH", "bot_database.db")
+if os.path.dirname(DB_PATH):
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:

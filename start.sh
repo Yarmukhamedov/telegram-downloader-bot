@@ -2,22 +2,22 @@
 
 echo "--- Starting PO Token provider server ---"
 cd /opt/bgutil-ytdlp-pot-provider/server
-# Запускаем и перенаправляем логи сервера в stdout, чтобы видеть их в Railway
+# Start PO token server in background
 node build/main.js > /tmp/pot_server.log 2>&1 &
 POT_PID=$!
 
-# Даем время на запуск
-sleep 5
+# Give server time to initialize
+sleep 3
 
-if ps -p $POT_PID > /dev/null
-then
-   echo "PO Token server started successfully on PID $POT_PID"
+if ps -p $POT_PID > /dev/null; then
+   echo "✅ PO Token server started successfully on PID $POT_PID"
 else
-   echo "ERROR: PO Token server failed to start! Last logs:"
+   echo "❌ ERROR: PO Token server failed to start! Last logs:"
    cat /tmp/pot_server.log
+   exit 1
 fi
 
-echo "--- Starting Telegram Bot ---"
+echo "--- Starting Telegram Downloader Bot ---"
 cd /app
-# Используем exec чтобы сигналы (Stop/Restart) доходили до python
+# Use exec so OS signals (SIGTERM/SIGINT) pass directly to Python for graceful shutdown
 exec python3 app.py
