@@ -76,10 +76,10 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
     elif quality == 'mp3':
         format_spec = "bestaudio[ext=m4a]/bestaudio/best"
     else:
-        # Best quality — fallback chain from merged mp4 to any container
+        # Best quality — prioritize resolution (1080p/4K VP9/AV1/H264) over container extension
         format_spec = (
-            "bestvideo[ext=mp4]+bestaudio[ext=m4a]"
-            "/bestvideo+bestaudio"
+            "bestvideo+bestaudio"
+            "/bestvideo[ext=mp4]+bestaudio[ext=m4a]"
             "/best[ext=mp4]"
             "/best"
         )
@@ -91,7 +91,7 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
 
     ydl_opts = {
         "format": format_spec,
-        "format_sort": ["res", "ext:mp4:m4a", "codec:h264:aac"],
+        "format_sort": ["res", "codec:h264:aac", "ext:mp4:m4a"],
         "merge_output_format": "mp4",
         "noplaylist": True,
         "ffmpeg_location": ffmpeg_path,
@@ -377,6 +377,16 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
                     try:
                         info_preview = ydl.extract_info(url, download=False)
                         height = info_preview.get("height", 0) or 0
+                        if not height and "requested_formats" in info_preview:
+                            for rf in info_preview["requested_formats"]:
+                                if rf.get("vcodec") != "none" and rf.get("height"):
+                                    height = rf.get("height")
+                                    break
+                        if not height and "formats" in info_preview:
+                            for f in reversed(info_preview["formats"]):
+                                if f.get("vcodec") != "none" and f.get("height"):
+                                    height = f.get("height")
+                                    break
                         if 0 < height < 1080:
                             logger.warning(f"⚠️ Stage 1 max resolution is only {height}p (< 1080p). Escalating to Stage 2 for Full HD/4K...")
                             continue
