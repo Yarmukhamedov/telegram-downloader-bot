@@ -201,6 +201,11 @@ async def cmd_help(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown")
 
+@dp.message(F.text == "🛠 Admin Panel")
+async def cmd_admin_panel_direct(message: types.Message):
+    from admin import cmd_admin_panel
+    await cmd_admin_panel(message)
+
 @dp.callback_query(F.data == "check_subscription")
 async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
     is_sub, ch_id, ch_link = await check_channel_subscription(callback.from_user.id, bot)

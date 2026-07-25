@@ -186,17 +186,41 @@ async def get_setting(key: str, default: str = None) -> str:
 
 async def get_admin_stats() -> dict:
     today_str = date.today().isoformat()
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT COUNT(*) FROM users") as c:
-            total_users = (await c.fetchone())[0]
-        async with db.execute("SELECT COUNT(*) FROM users WHERE is_premium = 1") as c:
-            premium_users = (await c.fetchone())[0]
-        async with db.execute("SELECT COUNT(*) FROM users WHERE last_download_date = ?", (today_str,)) as c:
-            active_today = (await c.fetchone())[0]
-        async with db.execute("SELECT COUNT(*) FROM downloads_history") as c:
-            total_downloads = (await c.fetchone())[0]
-        async with db.execute("SELECT COUNT(*) FROM downloads_history WHERE created_at LIKE ?", (f"{today_str}%",)) as c:
-            downloads_today = (await c.fetchone())[0]
+    total_users, premium_users, active_today, total_downloads, downloads_today = 0, 0, 0, 0, 0
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            try:
+                async with db.execute("SELECT COUNT(*) FROM users") as c:
+                    row = await c.fetchone()
+                    if row: total_users = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error users: {e}")
+            try:
+                async with db.execute("SELECT COUNT(*) FROM users WHERE is_premium = 1") as c:
+                    row = await c.fetchone()
+                    if row: premium_users = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error premium: {e}")
+            try:
+                async with db.execute("SELECT COUNT(*) FROM users WHERE last_download_date = ?", (today_str,)) as c:
+                    row = await c.fetchone()
+                    if row: active_today = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error active: {e}")
+            try:
+                async with db.execute("SELECT COUNT(*) FROM downloads_history") as c:
+                    row = await c.fetchone()
+                    if row: total_downloads = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error total_downloads: {e}")
+            try:
+                async with db.execute("SELECT COUNT(*) FROM downloads_history WHERE created_at LIKE ?", (f"{today_str}%",)) as c:
+                    row = await c.fetchone()
+                    if row: downloads_today = row[0]
+            except Exception as e:
+                logger.warning(f"Stats error downloads_today: {e}")
+    except Exception as e:
+        logger.error(f"Error connecting for stats: {e}")
 
     return {
         "total_users": total_users,

@@ -34,16 +34,21 @@ async def cmd_admin_panel(message: types.Message):
         await message.answer("❌ Kechirasiz, siz admin emassiz!")
         return
 
-    stats = await get_admin_stats()
-    text = (
-        "🛠 **Admin Boshqaruv Paneli**\n\n"
-        f"👥 **Jami foydalanuvchilar:** {stats['total_users']} ta\n"
-        f"⭐ **Premium foydalanuvchilar:** {stats['premium_users']} ta\n"
-        f"⚡️ **Bugun faol:** {stats['active_today']} ta\n\n"
-        f"📊 **Jami yuklab olishlar:** {stats['total_downloads']} ta\n"
-        f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n"
-    )
-    await message.answer(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+    try:
+        stats = await get_admin_stats()
+        text = (
+            "🛠 **Admin Boshqaruv Paneli**\n\n"
+            f"👥 **Jami foydalanuvchilar:** {stats['total_users']} ta\n"
+            f"⭐ **Premium foydalanuvchilar:** {stats['premium_users']} ta\n"
+            f"⚡️ **Bugun faol:** {stats['active_today']} ta\n\n"
+            f"📊 **Jami yuklab olishlar:** {stats['total_downloads']} ta\n"
+            f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n\n"
+            "👇 *Quyidagi tugmalar orqali botni boshqarishingiz mumkin:*"
+        )
+        await message.answer(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Error in cmd_admin_panel: {e}")
+        await message.answer(f"❌ Admin panelni ochishda xatolik yuz berdi: {e}")
 
 @admin_router.callback_query(F.data == "admin_stats")
 async def cb_admin_stats(callback: types.CallbackQuery):
