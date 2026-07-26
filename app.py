@@ -135,9 +135,9 @@ async def cmd_settings(message: types.Message):
     lang = user.get('language', 'uz')
     
     text = (
-        "🎬 **Video Sifatini Tanlash**\n\nVideolar qaysi sifatda yuklab olinishini tanlang:" if lang == 'uz' else (
-        "🎬 **Выбор качества видео**\n\nВыберите качество для загрузки видео:" if lang == 'ru' else
-        "🎬 **Select Video Quality**\n\nSelect preferred video download quality:")
+        "🎬 *Video Sifatini Tanlash*\n\nVideolar qaysi sifatda yuklab olinishini tanlang:" if lang == 'uz' else (
+        "🎬 *Выбор качества видео*\n\nВыберите качество для загрузки видео:" if lang == 'ru' else
+        "🎬 *Select Video Quality*\n\nSelect preferred video download quality:")
     )
     await message.answer(text, reply_markup=get_settings_keyboard(quality, lang, message.message_id), parse_mode="Markdown")
 
@@ -366,7 +366,7 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
         code = args[1]
         success, r_type, r_val = await redeem_code(user_id, code)
         if success:
-            res_text = f"🎉 **Promokod qabul qilindi!**\n🎁 Sizga **+{r_val} {'🪙 Coin' if r_type=='coins' else 'kunlik Premium'}** taqdim etildi!"
+            res_text = f"🎉 *Promokod qabul qilindi!*\n🎁 Sizga *+{r_val} {'🪙 Coin' if r_type=='coins' else 'kunlik Premium'}* taqdim etildi!"
         else:
             err_map = {"NOT_FOUND": "❌ Bunday promokod mavjud emas.", "EXPIRED": "❌ Bu promokodning muddati yoki limiti tuggan.", "ALREADY_USED": "❌ Siz bu promokoddan avval foydalangansiz."}
             res_text = err_map.get(r_type, "❌ Xatolik yuz berdi.")
@@ -374,9 +374,9 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
         return
         
     prompt = (
-        "🎟 **Promokodni yozib yuboring:**\n\nMisol uchun: `/redeem NAVROZ2026`" if lang == 'uz' else (
-        "🎟 **Введите промокод:**\n\nПример: `/redeem NAVROZ2026`" if lang == 'ru' else
-        "🎟 **Enter your Promo Code:**\n\nExample: `/redeem NAVROZ2026`")
+        "🎟 *Promokodni yozib yuboring:*\n\nMisol uchun: `/redeem NAVROZ2026`" if lang == 'uz' else (
+        "🎟 *Введите промокод:*\n\nПример: `/redeem NAVROZ2026`" if lang == 'ru' else
+        "🎟 *Enter your Promo Code:*\n\nExample: `/redeem NAVROZ2026`")
     )
     await msg.answer(prompt, parse_mode="Markdown")
     if isinstance(event, types.CallbackQuery):
@@ -429,9 +429,9 @@ async def handle_media_download(message: types.Message, bot: Bot):
     if not is_sub:
         lang = await get_user_language(message.from_user.id)
         text = (
-            "⚠️ **Botdan foydalanish uchun kanalimizga obuna bo'ling!**\n\nObuna bo'lgach, **✅ Obunani tekshirish** tugmasini bosing:" if lang == 'uz' else (
-            "⚠️ **Подпишитесь на наш канал, чтобы использовать бота!**\n\nПосле подписки нажмите **✅ Проверить подписку**:" if lang == 'ru' else
-            "⚠️ **Please subscribe to our channel to use the bot!**\n\nAfter subscribing, click **✅ Check Subscription**:")
+            "⚠️ *Botdan foydalanish uchun kanalimizga obuna bo'ling!*\n\nObuna bo'lgach, *✅ Obunani tekshirish* tugmasini bosing:" if lang == 'uz' else (
+            "⚠️ *Подпишитесь на наш канал, чтобы использовать бота!*\n\nПосле подписки нажмите *✅ Проверить подписку*:" if lang == 'ru' else
+            "⚠️ *Please subscribe to our channel to use the bot!*\n\nAfter subscribing, click *✅ Check Subscription*:")
         )
         await message.answer(text, reply_markup=get_force_sub_keyboard(ch_link, lang), parse_mode="Markdown")
         return
@@ -460,7 +460,7 @@ async def handle_media_download(message: types.Message, bot: Bot):
         url_cache[url_hash] = url
         
         await message.answer(
-            f"{icon} **{platform} havolasi qabul qilindi!**\nSifat yoki formatni tanlang:",
+            f"{icon} *{platform} havolasi qabul qilindi!*\nSifat yoki formatni tanlang:",
             reply_markup=get_quality_selector_keyboard(url),
             parse_mode="Markdown"
         )
@@ -498,7 +498,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
     user = await get_or_create_user(message.from_user.id)
     is_vip = user['is_premium']
 
-    status_msg = await message.answer(f"{icon} **{platform}** havolasi ishlanmoqda...")
+    status_msg = await message.answer(f"{icon} *{platform}* havolasi ishlanmoqda...")
     loop = asyncio.get_event_loop()
     
     last_update_time = [loop.time()]
@@ -513,18 +513,18 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             if current_time - last_update_time[0] > 3:
                 last_update_time[0] = current_time
                 try:
-                    text = f"⏳ **{platform}** yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}"
+                    text = f"⏳ *{platform}* yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}"
                     asyncio.run_coroutine_threadsafe(status_msg.edit_text(text, parse_mode="Markdown"), loop)
                 except Exception:
                     pass
 
     if not is_vip and download_semaphore.locked():
-        await status_msg.edit_text("⏳ **Serverda yuklash navbati:** Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
+        await status_msg.edit_text("⏳ *Serverda yuklash navbati:* Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
 
     async with download_semaphore:
         try:
             os.makedirs("downloads", exist_ok=True)
-            await status_msg.edit_text(f"⏳ **{platform}** dan yuklab olinmoqda...")
+            await status_msg.edit_text(f"⏳ *{platform}* dan yuklab olinmoqda...")
             
             file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
             title = video_info.get("title", f"{platform} Video")
@@ -571,10 +571,10 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 video = FSInputFile(file_path)
                 thumbnail = FSInputFile(thumb_result) if thumb_result else None
 
-                res_str = f" | 🎬 **Sifat:** {height}p" if height else ""
+                res_str = f" | 🎬 *Sifat:* {height}p" if height else ""
                 await message.answer_video(
                     video,
-                    caption=f"{icon} **{title}**\n💾 **Hajm:** {file_size_mb:.1f} MB{res_str}\n\n🤖 @{bot_info.username}",
+                    caption=f"{icon} *{title}*\n💾 *Hajm:* {file_size_mb:.1f} MB{res_str}\n\n🤖 @{bot_info.username}",
                     width=width,
                     height=height,
                     duration=int(duration) if duration else None,
@@ -646,8 +646,8 @@ async def successful_payment_handler(message: types.Message):
         days = 90
     await grant_premium(user_id, days)
     await message.answer(
-        f"🎉 **Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.**\n\n"
-        f"Sizga **{days} kunlik ⭐ Premium** obuna taqdim etildi!\n"
+        f"🎉 *Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.*\n\n"
+        f"Sizga *{days} kunlik ⭐ Premium* obuna taqdim etildi!\n"
         "Endi cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning. 🚀",
         parse_mode="Markdown"
     )
@@ -655,10 +655,10 @@ async def successful_payment_handler(message: types.Message):
 @dp.callback_query(F.data == "buy_prem_card")
 async def cb_buy_card(callback: types.CallbackQuery):
     text = (
-        "💳 **Karta orqali to'lov (Click / Payme / Uzcard / Humo)**\n\n"
-        "⭐ 1 oy Premium narxi: **15,000 so'm**\n"
+        "💳 *Karta orqali to'lov (Click / Payme / Uzcard / Humo)*\n\n"
+        "⭐ 1 oy Premium narxi: *15,000 so'm*\n"
         "💳 Karta raqam: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n"
-        "📝 **To'lovni tasdiqlash uchun:** To'lovni amalga oshirgach, to'lov cheki rasmini (skrinshotini) darhol shu yerga yuboring! "
+        "📝 *To'lovni tasdiqlash uchun:* To'lovni amalga oshirgach, to'lov cheki rasmini (skrinshotini) darhol shu yerga yuboring! "
         "Adminlarimiz chekni tekshirib, bir necha daqiqada sizga Premium tarifni yoqib berishadi."
     )
     await callback.message.answer(text, parse_mode="Markdown")
@@ -677,9 +677,9 @@ async def handle_photo_receipt(message: types.Message, bot: Bot):
     await message.answer("✅ To'lov chekingiz adminlarga yuborildi! Tekshirib tez orada Premium tarifni aktivlashtiramiz. Rahmat! 😊")
 
     caption = (
-        "💳 **Yangi to'lov cheki (Karta / Click)**\n\n"
-        f"👤 **Foydalanuvchi:** {username} (`{user_id}`)\n"
-        f"🆔 **ID:** `{user_id}`\n\n"
+        "💳 *Yangi to'lov cheki (Karta / Click)*\n\n"
+        f"👤 *Foydalanuvchi:* {username} (`{user_id}`)\n"
+        f"🆔 *ID:* `{user_id}`\n\n"
         "To'lovni tasdiqlab, 30 kunlik Premium berishni xohlaysizmi?"
     )
     for admin_id in admin_ids:
@@ -707,7 +707,7 @@ async def cb_verify_prem(callback: types.CallbackQuery, bot: Bot):
     
     await grant_premium(target_user_id, days)
     await callback.message.edit_caption(
-        caption=f"✅ **Tasdiqlandi!** `{target_user_id}` foydalanuvchiga {days} kunlik Premium berildi.",
+        caption=f"✅ *Tasdiqlandi!* `{target_user_id}` foydalanuvchiga {days} kunlik Premium berildi.",
         parse_mode="Markdown"
     )
     await callback.answer("✅ Premium berildi!")
@@ -715,8 +715,8 @@ async def cb_verify_prem(callback: types.CallbackQuery, bot: Bot):
     try:
         await bot.send_message(
             target_user_id,
-            f"🎉 **Tabriklaymiz! To'lov chekingiz admin tomonidan tasdiqlandi!**\n\n"
-            f"Sizga **{days} kunlik ⭐ Premium** obuna yoqildi!\n"
+            f"🎉 *Tabriklaymiz! To'lov chekingiz admin tomonidan tasdiqlandi!*\n\n"
+            f"Sizga *{days} kunlik ⭐ Premium* obuna yoqildi!\n"
             "Endi cheksiz va super sifatli yuklashdan rohatlaning. 🚀",
             parse_mode="Markdown"
         )
@@ -732,7 +732,7 @@ async def cb_reject_prem(callback: types.CallbackQuery, bot: Bot):
         
     target_user_id = int(callback.data.split(":")[1])
     await callback.message.edit_caption(
-        caption=f"❌ **Rad etildi!** `{target_user_id}` foydalanuvchi cheki qabul qilinmadi.",
+        caption=f"❌ *Rad etildi!* `{target_user_id}` foydalanuvchi cheki qabul qilinmadi.",
         parse_mode="Markdown"
     )
     await callback.answer("❌ Rad etildi!")
@@ -740,7 +740,7 @@ async def cb_reject_prem(callback: types.CallbackQuery, bot: Bot):
     try:
         await bot.send_message(
             target_user_id,
-            "❌ **To'lov chekingiz tasdiqlanmadi.**\n\n"
+            "❌ *To'lov chekingiz tasdiqlanmadi.*\n\n"
             "Iltimos, to'g'ri chek yuborganingizga ishonch hosil qiling yoki savollar bo'yicha adminga murojaat qiling.",
             parse_mode="Markdown"
         )

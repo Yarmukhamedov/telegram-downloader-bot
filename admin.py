@@ -37,14 +37,14 @@ async def cmd_admin_panel(message: types.Message):
     try:
         stats = await get_admin_stats()
         text = (
-            "🛠 **Admin Boshqaruv Paneli**\n\n"
-            f"👥 **Jami foydalanuvchilar:** {stats['total_users']} ta\n"
-            f"⭐ **Premium foydalanuvchilar:** {stats['premium_users']} ta\n"
-            f"⚡️ **Bugun faol:** {stats['active_today']} ta\n\n"
-            f"📊 **Jami yuklab olishlar:** {stats['total_downloads']} ta\n"
-            f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n\n"
-            f"🪙 **Jami Coinlar (bazada):** {stats.get('total_coins', 0)} 🪙\n"
-            f"👥 **Jami takliflar (referallar):** {stats.get('total_referrals', 0)} ta\n\n"
+            "🛠 *Admin Boshqaruv Paneli*\n\n"
+            f"👥 *Jami foydalanuvchilar:* {stats['total_users']} ta\n"
+            f"⭐ *Premium foydalanuvchilar:* {stats['premium_users']} ta\n"
+            f"⚡️ *Bugun faol:* {stats['active_today']} ta\n\n"
+            f"📊 *Jami yuklab olishlar:* {stats['total_downloads']} ta\n"
+            f"📥 *Bugungi yuklashlar:* {stats['downloads_today']} ta\n\n"
+            f"🪙 *Jami Coinlar (bazada):* {stats.get('total_coins', 0)} 🪙\n"
+            f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta\n\n"
             "👇 *Quyidagi tugmalar orqali botni boshqarishingiz mumkin:*"
         )
         await message.answer(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
@@ -61,14 +61,14 @@ async def cb_admin_stats(callback: types.CallbackQuery):
 
     stats = await get_admin_stats()
     text = (
-        "📊 **Bot Statistikasi**\n\n"
-        f"👥 **Jami foydalanuvchilar:** {stats['total_users']} ta\n"
-        f"⭐ **Premium foydalanuvchilar:** {stats['premium_users']} ta\n"
-        f"⚡️ **Bugun faol:** {stats['active_today']} ta\n\n"
-        f"📊 **Jami yuklab olishlar:** {stats['total_downloads']} ta\n"
-        f"📥 **Bugungi yuklashlar:** {stats['downloads_today']} ta\n\n"
-        f"🪙 **Jami Coinlar (bazada):** {stats.get('total_coins', 0)} 🪙\n"
-        f"👥 **Jami takliflar (referallar):** {stats.get('total_referrals', 0)} ta\n"
+        "📊 *Bot Statistikasi*\n\n"
+        f"👥 *Jami foydalanuvchilar:* {stats['total_users']} ta\n"
+        f"⭐ *Premium foydalanuvchilar:* {stats['premium_users']} ta\n"
+        f"⚡️ *Bugun faol:* {stats['active_today']} ta\n\n"
+        f"📊 *Jami yuklab olishlar:* {stats['total_downloads']} ta\n"
+        f"📥 *Bugungi yuklashlar:* {stats['downloads_today']} ta\n\n"
+        f"🪙 *Jami Coinlar (bazada):* {stats.get('total_coins', 0)} 🪙\n"
+        f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta\n"
     )
     await callback.message.edit_text(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
     await callback.answer()
@@ -103,7 +103,7 @@ async def handle_broadcast_message(message: types.Message, state: FSMContext, bo
             failed += 1
 
     await status_msg.edit_text(
-        f"✅ **Xabar yuborish yakunlandi!**\n\n"
+        f"✅ *Xabar yuborish yakunlandi!*\n\n"
         f"🟢 Muvaffaqiyatli: {success} ta\n"
         f"🔴 Etib bormadi (bloklangan): {failed} ta",
         parse_mode="Markdown"
@@ -121,7 +121,7 @@ async def cb_admin_channel(callback: types.CallbackQuery, state: FSMContext):
 
     await state.set_state(AdminStates.waiting_for_channel)
     await callback.message.answer(
-        f"⚙️ **Majburiy obuna kanali**\n\n"
+        f"⚙️ *Majburiy obuna kanali*\n\n"
         f"📌 Joriy Kanal ID/Username: `{current_ch}`\n"
         f"🔗 Joriy Link: `{current_link}`\n\n"
         f"Yangi kanal ma'lumotlarini quyidagi formatda yuboring:\n"
@@ -161,7 +161,7 @@ async def cb_admin_premium(callback: types.CallbackQuery, state: FSMContext):
 
     await state.set_state(AdminStates.waiting_for_premium_input)
     await callback.message.answer(
-        "👑 **Premium Berish**\n\n"
+        "👑 *Premium Berish*\n\n"
         "Foydalanuvchi ID si va kunlar sonini quyidagi formatda kiriting:\n"
         "`123456789 30` (ID va Kun)",
         parse_mode="Markdown"
@@ -215,7 +215,7 @@ async def cmd_create_code(message: types.Message):
         max_u = int(parts[4]) if len(parts) > 4 else 100
         res = await create_redeem_code(code, r_type, val, max_u)
         if res:
-            await message.answer(f"✅ Yangi promokod yaratildi!\n🎟 **Kod:** `{code}`\n🎁 **Turi:** {r_type} (+{val})\n👥 **Limit:** {max_u} ta kishi", parse_mode="Markdown")
+            await message.answer(f"✅ Yangi promokod yaratildi!\n🎟 *Kod:* `{code}`\n🎁 *Turi:* {r_type} (+{val})\n👥 *Limit:* {max_u} ta kishi", parse_mode="Markdown")
         else:
             await message.answer("❌ Bu kod avval yaratilgan yoki xatolik yuz berdi.")
     else:
