@@ -26,7 +26,8 @@ from database import (
     create_redeem_code, redeem_code
 )
 from downloader import (
-    download_media, cleanup_file, get_video_duration, get_video_dimensions,
+    detect_platform_and_url, download_media, get_video_metadata,
+    ensure_h264_codec, convert_to_mp3, create_video_thumbnail,
     compress_video_to_target_size
 )
 from keyboards import (
