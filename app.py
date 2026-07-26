@@ -31,7 +31,7 @@ from downloader import (
 )
 from keyboards import (
     get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
-    get_quality_selector_keyboard, get_profile_keyboard, get_payment_receipt_keyboard,
+    get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard, get_payment_receipt_keyboard,
     get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard
 )
 from locales import get_text
@@ -172,7 +172,23 @@ async def cmd_profile(message: types.Message):
                     daily_downloads=user['daily_downloads'],
                     daily_limit=daily_limit,
                     pref_q=pref_q)
-    await message.answer(text, reply_markup=get_profile_keyboard(lang), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
+
+@dp.message(F.text.in_(["🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)"]))
+async def cmd_balance(message: types.Message):
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    coins = await get_user_coins(user_id)
+    text = get_text("balance_text", lang, coins=coins)
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(F.text.in_(["🔙 Orqaga", "🔙 Назад", "🔙 Back"]))
+async def cmd_back_main(message: types.Message):
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    is_admin = user_id in get_admin_ids()
+    text = get_text("back_main_menu", lang)
+    await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
 @dp.message(F.text.in_(["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center"]))
 @dp.callback_query(F.data == "invite_center_menu")
@@ -308,6 +324,8 @@ async def handle_media_download(message: types.Message, bot: Bot):
         "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem",
         "🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language",
         "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
+        "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
+        "🔙 Orqaga", "🔙 Назад", "🔙 Back",
         "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"
     ]:
         return

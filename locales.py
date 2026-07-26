@@ -33,6 +33,16 @@ MESSAGES = {
         "ru": "🛍 Магазин и Промокоды",
         "en": "🛍 Shop & Redeem"
     },
+    "btn_balance": {
+        "uz": "🪙 Balans (Coinlar)",
+        "ru": "🪙 Баланс (Монеты)",
+        "en": "🪙 Balance (Coins)"
+    },
+    "btn_back": {
+        "uz": "🔙 Orqaga",
+        "ru": "🔙 Назад",
+        "en": "🔙 Back"
+    },
     "btn_language": {
         "uz": "🌐 Til / Язык / Language",
         "ru": "🌐 Язык / Til / Language",
@@ -187,6 +197,34 @@ MESSAGES = {
             "You can also enter special promotional codes to claim instant rewards!\n\n"
             "👇 *Select an option below:*"
         )
+    },
+    "balance_text": {
+        "uz": (
+            "🪙 **Sizning Coin balansingiz:** **{coins} 🪙 Coin**\n\n"
+            "💡 **Coin qanday yig'iladi?**\n"
+            "• 👥 **Invite Center** orqali do'stlaringizni botga taklif qiling (+100 Coin har bir do'st uchun).\n"
+            "• 🎁 Adminlar bergan maxsus **Promokodlar**ni faollashtiring.\n\n"
+            "🛍 Coinlarni **Do'kon (Shop)** orqali VIP Premium va qo'shimcha limitlarga almashtirishingiz mumkin!"
+        ),
+        "ru": (
+            "🪙 **Ваш баланс Монет:** **{coins} 🪙 Монет**\n\n"
+            "💡 **Как заработать Монеты?**\n"
+            "• 👥 Приглашайте друзей через **Invite Center** (+100 Монет за каждого друга).\n"
+            "• 🎁 Активируйте специальные **Промокоды** от администрации.\n\n"
+            "🛍 Монеты можно обменять на VIP Premium и лимиты в **Магазине (Shop)**!"
+        ),
+        "en": (
+            "🪙 **Your Coin Balance:** **{coins} 🪙 Coins**\n\n"
+            "💡 **How to earn Coins?**\n"
+            "• 👥 Invite friends via **Invite Center** (+100 Coins per referral).\n"
+            "• 🎁 Redeem special **Promo Codes** from admins.\n\n"
+            "🛍 You can exchange Coins for VIP Premium and extra limits in the **Shop**!"
+        )
+    },
+    "back_main_menu": {
+        "uz": "🏠 **Bosh menyuga qaytildi.**",
+        "ru": "🏠 **Возврат в главное меню.**",
+        "en": "🏠 **Returned to Main Menu.**"
     },
 
     # Invite Center & Anti-Cheat

@@ -17,6 +17,21 @@ def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboard
         buttons.append([KeyboardButton(text=get_text("btn_admin", lang))])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
+def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    buttons = [
+        [
+            KeyboardButton(text=get_text("btn_balance", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_invite_center", lang)),
+            KeyboardButton(text=get_text("btn_shop_redeem", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_back", lang))
+        ]
+    ]
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
 def get_language_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [
