@@ -32,6 +32,18 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
+def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    buttons = [
+        [
+            KeyboardButton(text=get_text("btn_invite_link", lang)),
+            KeyboardButton(text=get_text("btn_invite_stats", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_back", lang))
+        ]
+    ]
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
 def get_language_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [

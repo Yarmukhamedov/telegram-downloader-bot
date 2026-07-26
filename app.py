@@ -34,7 +34,8 @@ from keyboards import (
     get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
     get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
     get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
-    get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard
+    get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
+    get_invite_center_reply_keyboard
 )
 from locales import get_text
 from admin import admin_router, get_admin_ids
@@ -224,7 +225,7 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
     current_state = await state.get_state()
-    if current_state == "in_shop":
+    if current_state in ["in_shop", "in_invite_center"]:
         await state.set_state("in_profile")
         user = await get_or_create_user(user_id, message.from_user.username, message.from_user.full_name)
         status_str = f"⭐ Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
@@ -241,20 +242,44 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
 
 @dp.message(F.text.in_(["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center"]))
 @dp.callback_query(F.data == "invite_center_menu")
-async def cmd_invite_center(event: types.Message | types.CallbackQuery, bot: Bot):
+async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: FSMContext, bot: Bot):
+    await state.set_state("in_invite_center")
+    msg = event.message if isinstance(event, types.CallbackQuery) else event
+    user_id = event.from_user.id
+    lang = await get_user_language(user_id)
+    
+    text = get_text("invite_center_welcome", lang)
+    await msg.answer(text, reply_markup=get_invite_center_reply_keyboard(lang), parse_mode="Markdown")
+    if isinstance(event, types.CallbackQuery):
+        await event.answer()
+
+@dp.message(F.text.in_(["🔗 Invite Link", "🔗 Taklif havolasi", "🔗 Ссылка приглашения"]))
+@dp.callback_query(F.data == "show_invite_link")
+async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: Bot):
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
     lang = await get_user_language(user_id)
     bot_info = await bot.get_me()
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
     
+    text = get_text("invite_link_text", lang, ref_link=ref_link)
+    await msg.answer(text, reply_markup=get_invite_center_keyboard(ref_link, lang), parse_mode="Markdown")
+    if isinstance(event, types.CallbackQuery):
+        await event.answer()
+
+@dp.message(F.text.in_(["📊 Invite Stats", "📊 Statistika", "📊 Статистика"]))
+@dp.callback_query(F.data == "show_invite_stats")
+async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot: Bot):
+    msg = event.message if isinstance(event, types.CallbackQuery) else event
+    user_id = event.from_user.id
+    lang = await get_user_language(user_id)
+    
     stats = await get_referral_stats(user_id)
-    text = get_text("invite_center_text", lang,
-                    ref_link=ref_link,
+    text = get_text("invite_stats_text", lang,
                     total_ref=stats['total'],
                     active_ref=stats['active'],
                     earned_coins=stats['earned_coins'])
-    await msg.answer(text, reply_markup=get_invite_center_keyboard(ref_link, lang), parse_mode="Markdown")
+    await msg.answer(text, parse_mode="Markdown")
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 

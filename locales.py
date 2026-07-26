@@ -28,6 +28,16 @@ MESSAGES = {
         "ru": "👥 Приглашения (Invite Center)",
         "en": "👥 Invite Center"
     },
+    "btn_invite_link": {
+        "uz": "🔗 Invite Link",
+        "ru": "🔗 Invite Link",
+        "en": "🔗 Invite Link"
+    },
+    "btn_invite_stats": {
+        "uz": "📊 Invite Stats",
+        "ru": "📊 Invite Stats",
+        "en": "📊 Invite Stats"
+    },
     "btn_shop_redeem": {
         "uz": "🛍 Do'kon",
         "ru": "🛍 Магазин",
@@ -293,6 +303,72 @@ MESSAGES = {
     },
 
     # Invite Center & Anti-Cheat
+    "invite_center_welcome": {
+        "uz": (
+            "👥 **Invite Center (Takliflar Markazi)**\n\n"
+            "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini **bepulga** qo'lga kiriting!\n\n"
+            "👇 *Kerakli menyuni tanlang:*"
+        ),
+        "ru": (
+            "👥 **Invite Center (Центр Приглашений)**\n\n"
+            "Приглашайте друзей и получайте Premium подписку абсолютно **бесплатно**!\n\n"
+            "👇 *Выберите нужный пункт:*"
+        ),
+        "en": (
+            "👥 **Invite Center**\n\n"
+            "Invite your friends and get Premium access completely **for free**!\n\n"
+            "👇 *Select an option below:*"
+        )
+    },
+    "invite_link_text": {
+        "uz": (
+            "🔗 **Invite Link**\n\n"
+            "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini bepulga qo'lga kiriting!\n\n"
+            "🔗 **Sizning shaxsiy referal havolangiz:**\n"
+            "`{ref_link}`\n\n"
+            "**Qoidalar:**\n"
+            "• Har bir faol tasdiqlangan do'stingiz uchun 100 coin olasiz\n"
+            "• Do'stingiz faol hisoblanishi uchun u talab qilingan kanalga obuna bo'lishi va ushbu bot orqali kamida 1 ta video yoki musiqa yuklab olishi shart"
+        ),
+        "ru": (
+            "🔗 **Invite Link**\n\n"
+            "Приглашайте друзей и получайте Premium подписку абсолютно бесплатно!\n\n"
+            "🔗 **Ваша персональная реферальная ссылка:**\n"
+            "`{ref_link}`\n\n"
+            "**Правила:**\n"
+            "• Вы получаете 100 монет за каждого активного подтвержденного друга\n"
+            "• Чтобы друг считался активным, он должен подписаться на обязательный канал и скачать минимум 1 видео или аудио через этого бота"
+        ),
+        "en": (
+            "🔗 **Invite Link**\n\n"
+            "Invite your friends and you can get Premium access completely for free!\n\n"
+            "🔗 **Your Personal Referral Link:**\n"
+            "`{ref_link}`\n\n"
+            "**Rules:**\n"
+            "• You get 100 coins for each active verified friend\n"
+            "• To be verified as active, your friend must join the required channel and download at least 1 video or audio using this bot"
+        )
+    },
+    "invite_stats_text": {
+        "uz": (
+            "📊 **Sizning Takliflar Statistikangiz:**\n\n"
+            "• **Jami taklif qilinganlar:** {total_ref}\n"
+            "• **Faol do'stlar:** {active_ref}\n"
+            "• **Referaldan yig'ilgan coinlar:** {earned_coins}"
+        ),
+        "ru": (
+            "📊 **Ваша статистика приглашений:**\n\n"
+            "• **Всего приглашено пользователей:** {total_ref}\n"
+            "• **Активные друзья:** {active_ref}\n"
+            "• **Заработано реферальных монет:** {earned_coins}"
+        ),
+        "en": (
+            "📊 **Your Referral Statistics:**\n\n"
+            "• **Total invited users:** {total_ref}\n"
+            "• **Active friends:** {active_ref}\n"
+            "• **Earned referral coins:** {earned_coins}"
+        )
+    },
     "invite_center_text": {
         "uz": (
             "👥 **Invite Center (Takliflar Markazi)**\n\n"
