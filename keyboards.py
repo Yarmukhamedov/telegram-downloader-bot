@@ -42,7 +42,7 @@ def get_language_keyboard() -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_settings_keyboard(current_quality: str = 'best', lang: str = "uz") -> InlineKeyboardMarkup:
+def get_settings_keyboard(current_quality: str = 'best', lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
     q_map = {
         'best': "🎬 Eng yuqori (1080p / 4K)" if lang == 'uz' else ("🎬 Максимальное (1080p / 4K)" if lang == 'ru' else "🎬 Highest (1080p / 4K)"),
         '720p': "📺 O'rtacha HD (720p)" if lang == 'uz' else ("📺 Среднее HD (720p)" if lang == 'ru' else "📺 Medium HD (720p)"),
@@ -54,9 +54,9 @@ def get_settings_keyboard(current_quality: str = 'best', lang: str = "uz") -> In
     buttons = []
     for q_key, q_label in q_map.items():
         prefix = "✅ " if current_quality == q_key else ""
-        buttons.append([InlineKeyboardButton(text=f"{prefix}{q_label}", callback_data=f"set_quality:{q_key}")])
+        buttons.append([InlineKeyboardButton(text=f"{prefix}{q_label}", callback_data=f"set_quality:{q_key}:{user_msg_id}")])
     
-    buttons.append([InlineKeyboardButton(text="🌐 Tilni o'zgartirish / Language", callback_data="change_lang_menu")])
+    buttons.append([InlineKeyboardButton(text=get_text("btn_back", lang), callback_data=f"close_quality:{user_msg_id}")])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

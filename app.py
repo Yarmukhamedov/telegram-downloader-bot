@@ -125,28 +125,62 @@ async def cb_set_lang(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.message(Command("settings"))
-@dp.message(F.text.in_(["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"]))
+@dp.message(Command("quality"))
+@dp.message(F.text.in_(["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality"]))
 async def cmd_settings(message: types.Message):
-    logger.info(f">>> Sozlamalar clicked by user_id: {message.from_user.id}")
+    logger.info(f">>> Sifat/Quality clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id)
     quality = user['preferred_quality']
     lang = user.get('language', 'uz')
     
     text = (
-        "⚙️ **Yuklash Sozlamalari**\n\nVideolar qaysi sifatda yuklab olinishini tanlang:" if lang == 'uz' else (
-        "⚙️ **Настройки загрузки**\n\nВыберите качество для загрузки видео:" if lang == 'ru' else
-        "⚙️ **Download Settings**\n\nSelect preferred video download quality:")
+        "🎬 **Video Sifatini Tanlash**\n\nVideolar qaysi sifatda yuklab olinishini tanlang:" if lang == 'uz' else (
+        "🎬 **Выбор качества видео**\n\nВыберите качество для загрузки видео:" if lang == 'ru' else
+        "🎬 **Select Video Quality**\n\nSelect preferred video download quality:")
     )
-    await message.answer(text, reply_markup=get_settings_keyboard(quality, lang), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_settings_keyboard(quality, lang, message.message_id), parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("set_quality:"))
 async def cb_set_quality(callback: types.CallbackQuery):
-    quality = callback.data.split(":")[1]
+    parts = callback.data.split(":")
+    quality = parts[1]
+    user_msg_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
     await update_user_quality(callback.from_user.id, quality)
-    lang = await get_user_language(callback.from_user.id)
     
-    await callback.message.edit_reply_markup(reply_markup=get_settings_keyboard(quality, lang))
-    await callback.answer("✅ OK", show_alert=True)
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.warning(f"Could not delete quality menu message: {e}")
+
+    if user_msg_id > 0:
+        try:
+            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
+        except Exception as e:
+            logger.warning(f"Could not delete user trigger message: {e}")
+
+    lang = await get_user_language(callback.from_user.id)
+    q_map = {'best': "1080p / 4K", '720p': "720p HD", '480p': "480p SD", 'mp3': "MP3 Audio", 'ask': "❓ Ask"}
+    q_str = q_map.get(quality, quality)
+    msg_text = f"✅ Video yuklash sifati o'zgartirildi: {q_str}" if lang == 'uz' else (
+        f"✅ Качество загрузки изменено на: {q_str}" if lang == 'ru' else
+        f"✅ Download quality set to: {q_str}"
+    )
+    await callback.answer(msg_text, show_alert=True)
+
+@dp.callback_query(F.data.startswith("close_quality:"))
+async def cb_close_quality(callback: types.CallbackQuery):
+    parts = callback.data.split(":")
+    user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        pass
+    if user_msg_id > 0:
+        try:
+            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
+        except Exception as e:
+            pass
+    await callback.answer()
 
 @dp.message(F.text.in_(["👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan"]))
 async def cmd_profile(message: types.Message, state: FSMContext):
@@ -347,16 +381,17 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
 async def handle_media_download(message: types.Message, bot: Bot):
     logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
     if message.text in [
-        "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings",
+        "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality",
         "👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan",
         "ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help",
         "🛠 Admin Panel", "🛠 Админ панель",
         "👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center",
-        "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem",
+        "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem", "🛍 Do'kon", "🛍 Магазин", "🛍 Shop",
+        "👑 Buy Premium", "👑 Купить Premium", "🪙 Use Coins", "🪙 Использовать монеты",
         "🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language",
         "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
         "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
-        "🔙 Orqaga", "🔙 Назад", "🔙 Back",
+        "🔙 Orqaga", "🔙 Назад", "🔙 Back", "⬅️ Orqaga", "⬅️ Назад", "⬅️ Back",
         "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"
     ]:
         return

@@ -4,9 +4,9 @@
 MESSAGES = {
     # Buttons
     "btn_settings": {
-        "uz": "⚙️ Sozlamalar",
-        "ru": "⚙️ Настройки",
-        "en": "⚙️ Settings"
+        "uz": "🎬 Sifat (Quality)",
+        "ru": "🎬 Качество (Quality)",
+        "en": "🎬 Quality"
     },
     "btn_profile": {
         "uz": "👤 Profil / Tarif",
