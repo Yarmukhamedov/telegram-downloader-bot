@@ -74,14 +74,14 @@ MESSAGES = {
         "en": "🎟 Enter Redeem Code"
     },
     "btn_shop_vip7": {
-        "uz": "👑 7 kunlik VIP Premium (300 🪙)",
-        "ru": "👑 7 дней VIP Premium (300 🪙)",
-        "en": "👑 7 Days VIP Premium (300 🪙)"
+        "uz": "👑 7 kunlik Premium (300 🪙)",
+        "ru": "👑 7 дней Premium (300 🪙)",
+        "en": "👑 7 Days Premium (300 🪙)"
     },
     "btn_shop_vip30": {
-        "uz": "👑 30 kunlik VIP Premium (1000 🪙)",
-        "ru": "👑 30 дней VIP Premium (1000 🪙)",
-        "en": "👑 30 Days VIP Premium (1000 🪙)"
+        "uz": "👑 30 kunlik Premium (1000 🪙)",
+        "ru": "👑 30 дней Premium (1000 🪙)",
+        "en": "👑 30 Days Premium (1000 🪙)"
     },
     "btn_shop_limit": {
         "uz": "⚡️ Bugunga +20 yuklash limit (50 🪙)",
@@ -95,19 +95,19 @@ MESSAGES = {
             "👋 **Assalomu alaykum, {name}!**\n\n"
             "Mening ismim **{bot_name}** — ijtimoiy tarmoqlardan (YouTube, TikTok, Instagram, Pinterest va boshqalar) videolarni eng yuqori sifatda, hech qanday suv belgisiz (No Watermark) yuklab beradigan super botman! 🚀\n\n"
             "⚡️ Shunchaki video havolasini menga yuboring!\n"
-            "🎁 Bepul VIP olish, Coin yig'ish va Tariflar bilan tanishish uchun **👤 Profil / Tarif** yoki **👥 Invite Center** bo'limiga o'ting."
+            "🎁 Bepul Premium olish, Coin yig'ish va Tariflar bilan tanishish uchun **👤 Profil / Tarif** yoki **👥 Invite Center** bo'limiga o'ting."
         ),
         "ru": (
             "👋 **Здравствуйте, {name}!**\n\n"
             "Я **{bot_name}** — бот для скачивания видео с социальных сетей (YouTube, TikTok, Instagram, Pinterest и др.) в высоком качестве без водяных знаков! 🚀\n\n"
             "⚡️ Просто отправьте мне ссылку на видео!\n"
-            "🎁 Для получения бесплатного VIP, монет и управления тарифами перейдите в **👤 Профиль / Тариф** или **👥 Invite Center**."
+            "🎁 Для получения бесплатного Premium, монет и управления тарифами перейдите в **👤 Профиль / Тариф** или **👥 Invite Center**."
         ),
         "en": (
             "👋 **Hello, {name}!**\n\n"
             "I am **{bot_name}** — a super bot for downloading videos from social networks (YouTube, TikTok, Instagram, Pinterest, etc.) in the highest quality without watermarks! 🚀\n\n"
             "⚡️ Just send me any video link!\n"
-            "🎁 To get free VIP, earn Coins, and check plans, go to **👤 Profile / Plan** or **👥 Invite Center**."
+            "🎁 To get free Premium, earn Coins, and check plans, go to **👤 Profile / Plan** or **👥 Invite Center**."
         )
     },
     "help_text": {
@@ -121,8 +121,8 @@ MESSAGES = {
             "   • 🐦 Twitter / X (Videolar)\n\n"
             "2. **Qanday yuklanadi?**\n"
             "   Shunchaki istalgan video havolasini botga yuboring!\n\n"
-            "3. **🪙 Coin va VIP Premium:**\n"
-            "   Do'stlaringizni taklif qilish orqali **🪙 Coin** yig'ing va ularni **🛍 Do'kon**da bepul VIP obunalarga almashtiring!"
+            "3. **🪙 Coin va Premium:**\n"
+            "   Do'stlaringizni taklif qilish orqali **🪙 Coin** yig'ing va ularni **🛍 Do'kon**da bepul Premium obunalarga almashtiring!"
         ),
         "ru": (
             "ℹ️ **Помощь по использованию**\n\n"
@@ -134,8 +134,8 @@ MESSAGES = {
             "   • 🐦 Twitter / X (Видео)\n\n"
             "2. **Как скачивать?**\n"
             "   Просто отправьте мне ссылку на видео!\n\n"
-            "3. **🪙 Монеты и VIP Premium:**\n"
-            "   Приглашайте друзей, зарабатывайте **🪙 Монеты** и обменивайте их на VIP в **🛍 Магазине**!"
+            "3. **🪙 Монеты и Premium:**\n"
+            "   Приглашайте друзей, зарабатывайте **🪙 Монеты** и обменивайте их на Premium в **🛍 Магазине**!"
         ),
         "en": (
             "ℹ️ **Bot Usage Guide**\n\n"
@@ -147,8 +147,8 @@ MESSAGES = {
             "   • 🐦 Twitter / X (Videos)\n\n"
             "2. **How to download?**\n"
             "   Simply send any video link to the bot!\n\n"
-            "3. **🪙 Coins & VIP Premium:**\n"
-            "   Invite friends to earn **🪙 Coins** and exchange them for free VIP Premium in the **🛍 Shop**!"
+            "3. **🪙 Coins & Premium:**\n"
+            "   Invite friends to earn **🪙 Coins** and exchange them for free Premium in the **🛍 Shop**!"
         )
     },
 
@@ -180,21 +180,21 @@ MESSAGES = {
         "uz": (
             "🛍 **Do'kon va Promokodlar Markazi**\n\n"
             "💰 **Sizning balansingiz:** **{coins} 🪙 Coin**\n\n"
-            "Bu yerda siz yig'ishga muvaffaq bo'lgan Coinlaringizga VIP tariflar yoki qo'shimcha yuklash limitlarini sotib olishingiz mumkin.\n"
+            "Bu yerda siz yig'ishga muvaffaq bo'lgan Coinlaringizga Premium tariflar yoki qo'shimcha yuklash limitlarini sotib olishingiz mumkin.\n"
             "Shuningdek, adminlar tomonidan berilgan maxsus promokodlarni kiritib instant mukofotlar oling!\n\n"
             "👇 *Kerakli menyuni tanlang:*"
         ),
         "ru": (
             "🛍 **Магазин и Промокоды**\n\n"
             "💰 **Ваш баланс:** **{coins} 🪙 Монет**\n\n"
-            "Здесь вы можете обменять заработанные Монеты на VIP тарифы или дополнительные лимиты скачиваний.\n"
+            "Здесь вы можете обменять заработанные Монеты на Premium тарифы или дополнительные лимиты скачиваний.\n"
             "Также вводите специальные промокоды от администрации и получайте подарки!\n\n"
             "👇 *Выберите нужный пункт:*"
         ),
         "en": (
             "🛍 **Shop & Redeem Center**\n\n"
             "💰 **Your Balance:** **{coins} 🪙 Coins**\n\n"
-            "Here you can exchange your earned Coins for VIP plans or extra download limits.\n"
+            "Here you can exchange your earned Coins for Premium plans or extra download limits.\n"
             "You can also enter special promotional codes to claim instant rewards!\n\n"
             "👇 *Select an option below:*"
         )
@@ -205,27 +205,27 @@ MESSAGES = {
             "💡 **Coin qanday yig'iladi?**\n"
             "• 👥 **Invite Center** orqali do'stlaringizni botga taklif qiling (+100 Coin har bir do'st uchun).\n"
             "• 🎁 Adminlar bergan maxsus **Promokodlar**ni faollashtiring.\n\n"
-            "🛍 Coinlarni **Do'kon (Shop)** orqali VIP Premium va qo'shimcha limitlarga almashtirishingiz mumkin!"
+            "🛍 Coinlarni **Do'kon (Shop)** orqali Premium va qo'shimcha limitlarga almashtirishingiz mumkin!"
         ),
         "ru": (
             "🪙 **Ваш баланс Монет:** **{coins} 🪙 Монет**\n\n"
             "💡 **Как заработать Монеты?**\n"
             "• 👥 Приглашайте друзей через **Invite Center** (+100 Монет за каждого друга).\n"
             "• 🎁 Активируйте специальные **Промокоды** от администрации.\n\n"
-            "🛍 Монеты можно обменять на VIP Premium и лимиты в **Магазине (Shop)**!"
+            "🛍 Монеты можно обменять на Premium и лимиты в **Магазине (Shop)**!"
         ),
         "en": (
             "🪙 **Your Coin Balance:** **{coins} 🪙 Coins**\n\n"
             "💡 **How to earn Coins?**\n"
             "• 👥 Invite friends via **Invite Center** (+100 Coins per referral).\n"
             "• 🎁 Redeem special **Promo Codes** from admins.\n\n"
-            "🛍 You can exchange Coins for VIP Premium and extra limits in the **Shop**!"
+            "🛍 You can exchange Coins for Premium and extra limits in the **Shop**!"
         )
     },
     "buy_premium_text": {
         "uz": (
-            "👑 **VIP Premium Obunasi — Telegram Stars ⭐ orqali**\n\n"
-            "💎 **VIP Premium obunachilariga nimalar beriladi?**\n"
+            "👑 **Premium Obunasi — Telegram Stars ⭐ orqali**\n\n"
+            "💎 **Premium obunachilariga nimalar beriladi?**\n"
             "• 🚀 **Cheksiz yuklashlar:** Kunlik limitlarsiz istalgancha video torting.\n"
             "• 🎬 **Eng yuqori sifat:** 1080p Full HD va 4K Ultra HD videolarni yuklash imkoniyati.\n"
             "• ⚡️ **Navbatsiz super-tezkor oqim:** Veb-serverlarning maksimal tezligida yuklab beradi.\n"
@@ -234,8 +234,8 @@ MESSAGES = {
             "👇 **O'zingizga ma'qul bo'lgan muddatni tanlang:**"
         ),
         "ru": (
-            "👑 **Подписка VIP Premium — через Telegram Stars ⭐**\n\n"
-            "💎 **Что даёт статус VIP Premium?**\n"
+            "👑 **Подписка Premium — через Telegram Stars ⭐**\n\n"
+            "💎 **Что даёт статус Premium?**\n"
             "• 🚀 **Безлимитные скачивания:** Никаких суточных ограничений.\n"
             "• 🎬 **Максимальное качество:** Доступ к 1080p Full HD и 4K Ultra HD.\n"
             "• ⚡️ **Приоритетная скорость:** Скачивание без очередей на максимальной скорости.\n"
@@ -244,11 +244,11 @@ MESSAGES = {
             "👇 **Выберите подходящий период подписки:**"
         ),
         "en": (
-            "👑 **VIP Premium Subscription — via Telegram Stars ⭐**\n\n"
-            "💎 **What do you get with VIP Premium?**\n"
+            "👑 **Premium Subscription — via Telegram Stars ⭐**\n\n"
+            "💎 **What do you get with Premium?**\n"
             "• 🚀 **Unlimited Downloads:** No daily download restrictions.\n"
             "• 🎬 **Highest Quality:** Unlock 1080p Full HD and 4K Ultra HD downloads.\n"
-            "• ⚡️ **Priority High-Speed:** Bypass queues with VIP server speeds.\n"
+            "• ⚡️ **Priority High-Speed:** Bypass queues with Premium server speeds.\n"
             "• 🚫 **Ad-Free Experience:** Zero ads or sponsored messages.\n\n"
             "📌 *Terms:* Purchases are 100% securely processed via **Telegram Stars ⭐**. You can extend your subscription at any time.\n\n"
             "👇 **Select your preferred subscription period:**"
@@ -256,31 +256,31 @@ MESSAGES = {
     },
     "use_coins_text": {
         "uz": (
-            "🪙 **Coinlar evaziga VIP Premium va Limitlar xaridi**\n\n"
+            "🪙 **Coinlar evaziga Premium va Limitlar xaridi**\n\n"
             "💰 **Sizning joriy balansingiz:** **{coins} 🪙 Coin**\n\n"
             "💎 **Coinlaringizni nimalarga sarflash mumkin?**\n"
-            "• 👑 **VIP Premium (7 kun):** 300 Coin — 1 haftalik to'liq VIP imtiyozlari (1080p/4K, cheksiz, navbatsiz).\n"
-            "• 👑 **VIP Premium (30 kun):** 1,000 Coin — 1 oylik to'liq VIP imtiyozlari.\n"
+            "• 👑 **Premium (7 kun):** 300 Coin — 1 haftalik to'liq Premium imtiyozlari (1080p/4K, cheksiz, navbatsiz).\n"
+            "• 👑 **Premium (30 kun):** 1,000 Coin — 1 oylik to'liq Premium imtiyozlari.\n"
             "• ⚡️ **+50 Kunlik Limit:** 50 Coin — Oddiy tarifda bugun uchun qo'shimcha 50 ta video yuklash limiti.\n\n"
             "📌 *Shartlar:* Coinlarni **Invite Center** orqali do'stlaringizni taklif qilish (+100 Coin) yoki adminlar bergan **Promokodlar**ni kiritish orqali bepul yig'ishingiz mumkin.\n\n"
             "👇 **Quyidagi paketlardan birini tanlang:**"
         ),
         "ru": (
-            "🪙 **Покупка VIP Premium и Лимитов за Монеты**\n\n"
+            "🪙 **Покупка Premium и Лимитов за Монеты**\n\n"
             "💰 **Ваш текущий баланс:** **{coins} 🪙 Монет**\n\n"
             "💎 **На что можно потратить Монеты?**\n"
-            "• 👑 **VIP Premium (7 дней):** 300 Монет — 1 неделя всех VIP привилегий (1080p/4K, безлимит, без очереди).\n"
-            "• 👑 **VIP Premium (30 дней):** 1,000 Монет — 1 месяц всех VIP привилегий.\n"
+            "• 👑 **Premium (7 дней):** 300 Монет — 1 неделя всех Premium привилегий (1080p/4K, безлимит, без очереди).\n"
+            "• 👑 **Premium (30 дней):** 1,000 Монет — 1 месяц всех Premium привилегий.\n"
             "• ⚡️ **+50 Лимит скачиваний:** 50 Монет — дополнительные 50 скачиваний на сегодня.\n\n"
             "📌 *Условия:* Зарабатывайте Монеты бесплатно приглашая друзей через **Invite Center** (+100 Монет) или активируя **Промокоды** от администрации.\n\n"
             "👇 **Выберите желаемый пакет ниже:**"
         ),
         "en": (
-            "🪙 **Buy VIP Premium & Limits using Coins**\n\n"
+            "🪙 **Buy Premium & Limits using Coins**\n\n"
             "💰 **Your current balance:** **{coins} 🪙 Coins**\n\n"
             "💎 **What can you get with Coins?**\n"
-            "• 👑 **VIP Premium (7 Days):** 300 Coins — 1 week of full VIP perks (1080p/4K, unlimited, priority queue).\n"
-            "• 👑 **VIP Premium (30 Days):** 1,000 Coins — 1 month of full VIP perks.\n"
+            "• 👑 **Premium (7 Days):** 300 Coins — 1 week of full Premium perks (1080p/4K, unlimited, priority queue).\n"
+            "• 👑 **Premium (30 Days):** 1,000 Coins — 1 month of full Premium perks.\n"
             "• ⚡️ **+50 Daily Limit:** 50 Coins — add +50 extra video download limit for today.\n\n"
             "📌 *Terms:* Earn Coins for free by inviting friends via **Invite Center** (+100 Coins per friend) or activating admin **Promo Codes**.\n\n"
             "👇 **Choose a package below:**"
@@ -296,40 +296,40 @@ MESSAGES = {
     "invite_center_text": {
         "uz": (
             "👥 **Invite Center (Takliflar Markazi)**\n\n"
-            "Do'stlaringizni taklif qiling va botimizning haqiqiy VIP obunasini **bepulga** qo'lga kiriting!\n\n"
+            "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini **bepulga** qo'lga kiriting!\n\n"
             "🔗 **Sizning shaxsiy havolangiz:**\n`{ref_link}`\n\n"
             "📊 **Sizning takliflaringiz statistikasi:**\n"
             "• 👥 **Jami taklif qilinganlar:** {total_ref} kishi\n"
             "• ✅ **Faol (shartni bajargan) do'stlar:** {active_ref} kishi\n"
             "• 🪙 **Referaldan yig'ilgan Coinlar:** {earned_coins} 🪙 Coin\n\n"
             "🛡 **Anti-Nakrutka Qoidalari:**\n"
-            "1️⃣ Har bir **✅ Faol do'stingiz** uchun sizga **100 🪙 Coin** beriladi *(300 Coin = 7 kunlik VIP)*!\n"
+            "1️⃣ Har bir **✅ Faol do'stingiz** uchun sizga **100 🪙 Coin** beriladi *(300 Coin = 7 kunlik Premium)*!\n"
             "2️⃣ Do'stingiz faol hisoblanishi uchun u botga kirishi, **kanalga obuna bo'lishi VA kamida 1 ta video yoki musiqa yuklab olishi shart**.\n"
             "3️⃣ Soxta (nakrutka) akkauntlar yoki o'zingizni o'zingiz taklif qilishingiz hisobga olinmaydi."
         ),
         "ru": (
             "👥 **Invite Center (Центр Приглашений)**\n\n"
-            "Приглашайте друзей и получайте VIP подписку абсолютно **бесплатно**!\n\n"
+            "Приглашайте друзей и получайте Premium подписку абсолютно **бесплатно**!\n\n"
             "🔗 **Ваша реферальная ссылка:**\n`{ref_link}`\n\n"
             "📊 **Статистика приглашений:**\n"
             "• 👥 **Всего приглашено:** {total_ref} чел.\n"
             "• ✅ **Активные (выполнившие условия):** {active_ref} чел.\n"
             "• 🪙 **Заработано монет:** {earned_coins} 🪙 Монет\n\n"
             "🛡 **Правила защиты от накрутки:**\n"
-            "1️⃣ За каждого **✅ Активного друга** вы получаете **100 🪙 Монет** *(300 Монет = 7 дней VIP)*!\n"
+            "1️⃣ За каждого **✅ Активного друга** вы получаете **100 🪙 Монет** *(300 Монет = 7 дней Premium)*!\n"
             "2️⃣ Чтобы друг считался активным, он должен **подписаться на канал И скачать минимум 1 видео или музыку** через бота.\n"
             "3️⃣ Фейковые аккаунты (накрутка) не учитываются системой."
         ),
         "en": (
             "👥 **Invite Center**\n\n"
-            "Invite your friends and get VIP Premium access completely **for free**!\n\n"
+            "Invite your friends and get Premium access completely **for free**!\n\n"
             "🔗 **Your Personal Referral Link:**\n`{ref_link}`\n\n"
             "📊 **Your Referral Statistics:**\n"
             "• 👥 **Total Invited Users:** {total_ref}\n"
             "• ✅ **Active Verified Friends:** {active_ref}\n"
             "• 🪙 **Earned Referral Coins:** {earned_coins} 🪙 Coins\n\n"
             "🛡 **Anti-Cheat Rules:**\n"
-            "1️⃣ You get **100 🪙 Coins** for each **✅ Active verified friend** *(300 Coins = 7 Days VIP)*!\n"
+            "1️⃣ You get **100 🪙 Coins** for each **✅ Active verified friend** *(300 Coins = 7 Days Premium)*!\n"
             "2️⃣ To be verified as active, your friend must **join the required channel AND download at least 1 video or audio** using the bot.\n"
             "3️⃣ Fake/bot-farmed accounts or self-referrals will not be counted."
         )
@@ -339,19 +339,19 @@ MESSAGES = {
             "🎉 **Tabriklaymiz! Yangi faol referal tasdiqlandi!**\n\n"
             "👤 Sizning havolangiz orqali qo'shilgan do'stingiz botdan birinchi videosini yuklab oldi va qoidalarni bajardi!\n"
             "💰 Hisobingizga **+100 🪙 Coin** qo'shildi! Hozirgi balansingiz: **{coins} 🪙 Coin**.\n\n"
-            "👑 Coinlarni **🛍 Do'kon** da bepul VIP tariflarga almashtiring!"
+            "👑 Coinlarni **🛍 Do'kon** da bepul Premium tariflarga almashtiring!"
         ),
         "ru": (
             "🎉 **Поздравляем! Подтвержден новый активный реферал!**\n\n"
             "👤 Друг, приглашенный по вашей ссылке, скачал первое видео и выполнил все условия!\n"
             "💰 На ваш баланс начислено **+100 🪙 Монет**! Текущий баланс: **{coins} 🪙 Монет**.\n\n"
-            "👑 Обменивайте монеты на VIP в **🛍 Магазине**!"
+            "👑 Обменивайте монеты на Premium в **🛍 Магазине**!"
         ),
         "en": (
             "🎉 **Congratulations! New active referral verified!**\n\n"
             "👤 A friend invited via your link downloaded their first video and fulfilled all conditions!\n"
             "💰 You earned **+100 🪙 Coins**! Your current balance: **{coins} 🪙 Coins**.\n\n"
-            "👑 Exchange your Coins for free VIP in the **🛍 Shop**!"
+            "👑 Exchange your Coins for free Premium in the **🛍 Shop**!"
         )
     },
 
@@ -369,14 +369,14 @@ MESSAGES = {
 
     # Queue & Limits
     "queue_msg": {
-        "uz": "⏳ **Serverda yuklash navbati:** Siz navbatda turibsiz. Video tez orada yuklanadi...\n\n💎 *VIP Premium obunachilar navbatsiz tezkor yuklaydi!*",
-        "ru": "⏳ **Очередь загрузки:** Вы находитесь в очереди. Видео скоро загрузится...\n\n💎 *Подписчики VIP Premium скачивают без очереди!*",
-        "en": "⏳ **Download Queue:** You are in queue. Video will start downloading shortly...\n\n💎 *VIP Premium subscribers download instantly without waiting!*"
+        "uz": "⏳ **Serverda yuklash navbati:** Siz navbatda turibsiz. Video tez orada yuklanadi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*",
+        "ru": "⏳ **Очередь загрузки:** Вы находитесь в очереди. Видео скоро загрузится...\n\n💎 *Подписчики Premium скачивают без очереди!*",
+        "en": "⏳ **Download Queue:** You are in queue. Video will start downloading shortly...\n\n💎 *Premium subscribers download instantly without waiting!*"
     },
     "limit_exceeded": {
-        "uz": "❌ **Bugungi kunlik bepul yuklash limitingiz (15/15) tugadi!**\n\n⚡️ Limitni kengaytirish yoki cheksiz yuklash uchun **🛍 Do'kon** dan VIP oling yoki do'stlaringizni taklif qiling!",
-        "ru": "❌ **Ваш дневной бесплатный лимит скачиваний (15/15) исчерпан!**\n\n⚡️ Для снятия лимитов приобретите VIP в **🛍 Магазине** или приглашайте друзей!",
-        "en": "❌ **Your daily free download limit (15/15) is exhausted!**\n\n⚡️ To get unlimited downloads, get VIP in the **🛍 Shop** or invite friends!"
+        "uz": "❌ **Bugungi kunlik bepul yuklash limitingiz (15/15) tugadi!**\n\n⚡️ Limitni kengaytirish yoki cheksiz yuklash uchun **🛍 Do'kon** dan Premium oling yoki do'stlaringizni taklif qiling!",
+        "ru": "❌ **Ваш дневной бесплатный лимит скачиваний (15/15) исчерпан!**\n\n⚡️ Для снятия лимитов приобретите Premium в **🛍 Магазине** или приглашайте друзей!",
+        "en": "❌ **Your daily free download limit (15/15) is exhausted!**\n\n⚡️ To get unlimited downloads, get Premium in the **🛍 Shop** or invite friends!"
     }
 }
 

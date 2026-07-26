@@ -167,7 +167,7 @@ def get_use_coins_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
 def get_payment_receipt_keyboard(user_id: int) -> InlineKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="✅ Tasdiqlash (30 kun VIP)", callback_data=f"verify_prem:{user_id}:30"),
+            InlineKeyboardButton(text="✅ Tasdiqlash (30 kun Premium)", callback_data=f"verify_prem:{user_id}:30"),
             InlineKeyboardButton(text="❌ Rad etish", callback_data=f"reject_prem:{user_id}")
         ]
     ]

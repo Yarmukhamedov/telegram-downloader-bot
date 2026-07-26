@@ -219,4 +219,4 @@ async def cmd_create_code(message: types.Message):
         else:
             await message.answer("❌ Bu kod avval yaratilgan yoki xatolik yuz berdi.")
     else:
-        await message.answer("ℹ️ Foydalanish formatlari:\n`/create_code NAVROZ2026 coins 500 100` (100 kishi 500 coindan oladi)\n`/create_code VIP2026 days 7 50` (50 kishi 7 kunlik VIP oladi)", parse_mode="Markdown")
+        await message.answer("ℹ️ Foydalanish formatlari:\n`/create_code NAVROZ2026 coins 500 100` (100 kishi 500 coindan oladi)\n`/create_code PREM2026 days 7 50` (50 kishi 7 kunlik Premium oladi)", parse_mode="Markdown")

@@ -189,7 +189,7 @@ async def cmd_profile(message: types.Message, state: FSMContext):
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
     lang = user.get('language', 'uz')
     
-    status_str = f"⭐ VIP Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ VIP Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
+    status_str = f"⭐ Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
     daily_limit = ("Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")) if user['is_premium'] else "15"
     
     q_map = {
@@ -227,7 +227,7 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
     if current_state == "in_shop":
         await state.set_state("in_profile")
         user = await get_or_create_user(user_id, message.from_user.username, message.from_user.full_name)
-        status_str = f"⭐ VIP Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ VIP Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
+        status_str = f"⭐ Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
         daily_limit = ("Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")) if user['is_premium'] else "15"
         q_map = {'best': "🎬 1080p / 4K", '720p': "📺 720p HD", '480p': "📱 480p SD", 'mp3': "🎵 MP3 Audio", 'ask': "❓ Ask"}
         pref_q = q_map.get(user['preferred_quality'], "🎬 1080p / 4K")
@@ -307,14 +307,14 @@ async def cb_buy_shop(callback: types.CallbackQuery):
     await add_user_coins(user_id, -cost)
     if item == "vip7":
         await grant_premium(user_id, 7)
-        succ = "🎉 Tabriklaymiz! 300 Coin evaziga 7 kunlik VIP Premium sotib oldingiz!" if lang == 'uz' else (
-            "🎉 Поздравляем! Вы приобрели 7 дней VIP за 300 монет!" if lang == 'ru' else
-            "🎉 Congratulations! You purchased 7 Days VIP Premium for 300 Coins!")
+        succ = "🎉 Tabriklaymiz! 300 Coin evaziga 7 kunlik Premium sotib oldingiz!" if lang == 'uz' else (
+            "🎉 Поздравляем! Вы приобрели 7 дней Premium за 300 монет!" if lang == 'ru' else
+            "🎉 Congratulations! You purchased 7 Days Premium for 300 Coins!")
     elif item == "vip30":
         await grant_premium(user_id, 30)
-        succ = "🎉 Tabriklaymiz! 1000 Coin evaziga 30 kunlik VIP Premium sotib oldingiz!" if lang == 'uz' else (
-            "🎉 Поздравляем! Вы приобрели 30 дней VIP за 1000 монет!" if lang == 'ru' else
-            "🎉 Congratulations! You purchased 30 Days VIP Premium for 1000 Coins!")
+        succ = "🎉 Tabriklaymiz! 1000 Coin evaziga 30 kunlik Premium sotib oldingiz!" if lang == 'uz' else (
+            "🎉 Поздравляем! Вы приобрели 30 дней Premium за 1000 монет!" if lang == 'ru' else
+            "🎉 Congratulations! You purchased 30 Days Premium for 1000 Coins!")
     elif item == "limit":
         from database import DB_PATH
         import aiosqlite
@@ -341,7 +341,7 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
         code = args[1]
         success, r_type, r_val = await redeem_code(user_id, code)
         if success:
-            res_text = f"🎉 **Promokod qabul qilindi!**\n🎁 Sizga **+{r_val} {'🪙 Coin' if r_type=='coins' else 'kunlik VIP'}** taqdim etildi!"
+            res_text = f"🎉 **Promokod qabul qilindi!**\n🎁 Sizga **+{r_val} {'🪙 Coin' if r_type=='coins' else 'kunlik Premium'}** taqdim etildi!"
         else:
             err_map = {"NOT_FOUND": "❌ Bunday promokod mavjud emas.", "EXPIRED": "❌ Bu promokodning muddati yoki limiti tuggan.", "ALREADY_USED": "❌ Siz bu promokoddan avval foydalangansiz."}
             res_text = err_map.get(r_type, "❌ Xatolik yuz berdi.")
@@ -494,7 +494,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                     pass
 
     if not is_vip and download_semaphore.locked():
-        await status_msg.edit_text("⏳ **Serverda yuklash navbati:** Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *VIP Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
+        await status_msg.edit_text("⏳ **Serverda yuklash navbati:** Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
 
     async with download_semaphore:
         try:
@@ -580,13 +580,13 @@ async def cb_buy_stars(callback: types.CallbackQuery):
     option = callback.data.split(":")[1] if ":" in callback.data else "1m"
     lang = await get_user_language(callback.from_user.id)
     if option == "1m":
-        amount, days, label = 50, 30, ("⭐ 1 oy VIP Premium" if lang == 'uz' else ("⭐ 1 месяц VIP Premium" if lang == 'ru' else "⭐ 1 Month VIP Premium"))
+        amount, days, label = 50, 30, ("⭐ 1 oy Premium" if lang == 'uz' else ("⭐ 1 месяц Premium" if lang == 'ru' else "⭐ 1 Month Premium"))
         payload = "prem_30_days"
     elif option == "2m":
-        amount, days, label = 90, 60, ("⭐ 2 oy VIP Premium (-10%)" if lang == 'uz' else ("⭐ 2 месяца VIP Premium (-10%)" if lang == 'ru' else "⭐ 2 Months VIP Premium (-10%)"))
+        amount, days, label = 90, 60, ("⭐ 2 oy Premium (-10%)" if lang == 'uz' else ("⭐ 2 месяца Premium (-10%)" if lang == 'ru' else "⭐ 2 Months Premium (-10%)"))
         payload = "prem_60_days"
     elif option == "3m":
-        amount, days, label = 130, 90, ("⭐ 3 oy VIP Premium (-15%)" if lang == 'uz' else ("⭐ 3 месяца VIP Premium (-15%)" if lang == 'ru' else "⭐ 3 Months VIP Premium (-15%)"))
+        amount, days, label = 130, 90, ("⭐ 3 oy Premium (-15%)" if lang == 'uz' else ("⭐ 3 месяца Premium (-15%)" if lang == 'ru' else "⭐ 3 Months Premium (-15%)"))
         payload = "prem_90_days"
     else:
         return
@@ -622,7 +622,7 @@ async def successful_payment_handler(message: types.Message):
     await grant_premium(user_id, days)
     await message.answer(
         f"🎉 **Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.**\n\n"
-        f"Sizga **{days} kunlik ⭐ VIP Premium** obuna taqdim etildi!\n"
+        f"Sizga **{days} kunlik ⭐ Premium** obuna taqdim etildi!\n"
         "Endi cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning. 🚀",
         parse_mode="Markdown"
     )
@@ -631,10 +631,10 @@ async def successful_payment_handler(message: types.Message):
 async def cb_buy_card(callback: types.CallbackQuery):
     text = (
         "💳 **Karta orqali to'lov (Click / Payme / Uzcard / Humo)**\n\n"
-        "⭐ 1 oy VIP Premium narxi: **15,000 so'm**\n"
+        "⭐ 1 oy Premium narxi: **15,000 so'm**\n"
         "💳 Karta raqam: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n"
         "📝 **To'lovni tasdiqlash uchun:** To'lovni amalga oshirgach, to'lov cheki rasmini (skrinshotini) darhol shu yerga yuboring! "
-        "Adminlarimiz chekni tekshirib, bir necha daqiqada sizga VIP tarifni yoqib berishadi."
+        "Adminlarimiz chekni tekshirib, bir necha daqiqada sizga Premium tarifni yoqib berishadi."
     )
     await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
@@ -649,13 +649,13 @@ async def handle_photo_receipt(message: types.Message, bot: Bot):
         await message.answer("⚠️ Hozircha adminlar tayinlanmagan.")
         return
 
-    await message.answer("✅ To'lov chekingiz adminlarga yuborildi! Tekshirib tez orada VIP tarifni aktivlashtiramiz. Rahmat! 😊")
+    await message.answer("✅ To'lov chekingiz adminlarga yuborildi! Tekshirib tez orada Premium tarifni aktivlashtiramiz. Rahmat! 😊")
 
     caption = (
         "💳 **Yangi to'lov cheki (Karta / Click)**\n\n"
         f"👤 **Foydalanuvchi:** {username} (`{user_id}`)\n"
         f"🆔 **ID:** `{user_id}`\n\n"
-        "To'lovni tasdiqlab, 30 kunlik VIP berishni xohlaysizmi?"
+        "To'lovni tasdiqlab, 30 kunlik Premium berishni xohlaysizmi?"
     )
     for admin_id in admin_ids:
         try:
@@ -682,16 +682,16 @@ async def cb_verify_prem(callback: types.CallbackQuery, bot: Bot):
     
     await grant_premium(target_user_id, days)
     await callback.message.edit_caption(
-        caption=f"✅ **Tasdiqlandi!** `{target_user_id}` foydalanuvchiga {days} kunlik VIP Premium berildi.",
+        caption=f"✅ **Tasdiqlandi!** `{target_user_id}` foydalanuvchiga {days} kunlik Premium berildi.",
         parse_mode="Markdown"
     )
-    await callback.answer("✅ VIP Premium berildi!")
+    await callback.answer("✅ Premium berildi!")
     
     try:
         await bot.send_message(
             target_user_id,
             f"🎉 **Tabriklaymiz! To'lov chekingiz admin tomonidan tasdiqlandi!**\n\n"
-            f"Sizga **{days} kunlik ⭐ VIP Premium** obuna yoqildi!\n"
+            f"Sizga **{days} kunlik ⭐ Premium** obuna yoqildi!\n"
             "Endi cheksiz va super sifatli yuklashdan rohatlaning. 🚀",
             parse_mode="Markdown"
         )
