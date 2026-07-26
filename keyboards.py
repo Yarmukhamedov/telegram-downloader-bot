@@ -115,10 +115,24 @@ def get_invite_center_keyboard(ref_link: str, lang: str = "uz") -> InlineKeyboar
     share_url = f"https://t.me/share/url?url={quote(ref_link)}&text={quote(share_text)}"
     
     buttons = [
-        [InlineKeyboardButton(text=btn_share, url=share_url)],
-        [InlineKeyboardButton(text=btn_shop, callback_data="shop_menu")]
+        [InlineKeyboardButton(text=btn_share, url=share_url)]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    buttons = [
+        [
+            KeyboardButton(text=get_text("btn_buy_prem_menu", lang)),
+            KeyboardButton(text=get_text("btn_use_coins", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_redeem_code", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_back", lang))
+        ]
+    ]
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 def get_shop_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     buttons = [
@@ -128,6 +142,25 @@ def get_shop_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=get_text("btn_redeem_code", lang), callback_data="redeem_code_prompt")],
         [InlineKeyboardButton(text=get_text("btn_buy_stars", lang), callback_data="buy_prem_stars")],
         [InlineKeyboardButton(text=get_text("btn_buy_card", lang), callback_data="buy_prem_card")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_buy_prem_stars_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    t1 = "1 oy — 50 ⭐" if lang == 'uz' else ("1 месяц — 50 ⭐" if lang == 'ru' else "1 Month — 50 ⭐")
+    t2 = "2 oy — 90 ⭐ (-10%)" if lang == 'uz' else ("2 месяца — 90 ⭐ (-10%)" if lang == 'ru' else "2 Months — 90 ⭐ (-10%)")
+    t3 = "3 oy — 130 ⭐ (-15%)" if lang == 'uz' else ("3 месяца — 130 ⭐ (-15%)" if lang == 'ru' else "3 Months — 130 ⭐ (-15%)")
+    buttons = [
+        [InlineKeyboardButton(text=t1, callback_data="buy_stars:1m")],
+        [InlineKeyboardButton(text=t2, callback_data="buy_stars:2m")],
+        [InlineKeyboardButton(text=t3, callback_data="buy_stars:3m")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_use_coins_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data="buy_shop:vip7")],
+        [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data="buy_shop:vip30")],
+        [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data="buy_shop:limit")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, InlineQueryResultArticle, InputTextMessageContent
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
@@ -25,14 +26,14 @@ from database import (
     create_redeem_code, redeem_code
 )
 from downloader import (
-    detect_platform_and_url, download_media, get_video_metadata,
-    ensure_h264_codec, convert_to_mp3, create_video_thumbnail,
+    download_media, cleanup_file, get_video_duration, get_video_dimensions,
     compress_video_to_target_size
 )
 from keyboards import (
     get_main_keyboard, get_settings_keyboard, get_force_sub_keyboard,
-    get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard, get_payment_receipt_keyboard,
-    get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard
+    get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
+    get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
+    get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard
 )
 from locales import get_text
 from admin import admin_router, get_admin_ids
@@ -147,7 +148,8 @@ async def cb_set_quality(callback: types.CallbackQuery):
     await callback.answer("✅ OK", show_alert=True)
 
 @dp.message(F.text.in_(["👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan"]))
-async def cmd_profile(message: types.Message):
+async def cmd_profile(message: types.Message, state: FSMContext):
+    await state.set_state("in_profile")
     logger.info(f">>> Profil clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
     lang = user.get('language', 'uz')
@@ -182,13 +184,25 @@ async def cmd_balance(message: types.Message):
     text = get_text("balance_text", lang, coins=coins)
     await message.answer(text, parse_mode="Markdown")
 
-@dp.message(F.text.in_(["🔙 Orqaga", "🔙 Назад", "🔙 Back"]))
-async def cmd_back_main(message: types.Message):
+@dp.message(F.text.in_(["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back"]))
+async def cmd_back_main(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
-    is_admin = user_id in get_admin_ids()
-    text = get_text("back_main_menu", lang)
-    await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
+    current_state = await state.get_state()
+    if current_state == "in_shop":
+        await state.set_state("in_profile")
+        user = await get_or_create_user(user_id, message.from_user.username, message.from_user.full_name)
+        status_str = f"⭐ VIP Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ VIP Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
+        daily_limit = ("Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")) if user['is_premium'] else "15"
+        q_map = {'best': "🎬 1080p / 4K", '720p': "📺 720p HD", '480p': "📱 480p SD", 'mp3': "🎵 MP3 Audio", 'ask': "❓ Ask"}
+        pref_q = q_map.get(user['preferred_quality'], "🎬 1080p / 4K")
+        text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user['full_name'] or "User", status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q)
+        await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
+    else:
+        await state.clear()
+        is_admin = user_id in get_admin_ids()
+        text = get_text("back_main_menu", lang)
+        await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
 @dp.message(F.text.in_(["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center"]))
 @dp.callback_query(F.data == "invite_center_menu")
@@ -209,18 +223,34 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, bot: Bot
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
-@dp.message(F.text.in_(["🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem"]))
+@dp.message(F.text.in_(["🛍 Do'kon", "🛍 Магазин", "🛍 Shop", "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem"]))
 @dp.callback_query(F.data == "shop_menu")
-async def cmd_shop(event: types.Message | types.CallbackQuery):
+async def cmd_shop(event: types.Message | types.CallbackQuery, state: FSMContext):
+    await state.set_state("in_shop")
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     
     text = get_text("shop_text", lang, coins=coins)
-    await msg.answer(text, reply_markup=get_shop_keyboard(lang), parse_mode="Markdown")
+    await msg.answer(text, reply_markup=get_shop_reply_keyboard(lang), parse_mode="Markdown")
     if isinstance(event, types.CallbackQuery):
         await event.answer()
+
+@dp.message(F.text.in_(["👑 Buy Premium", "👑 Купить Premium"]))
+async def cmd_buy_premium_menu(message: types.Message):
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    text = get_text("buy_premium_text", lang)
+    await message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang), parse_mode="Markdown")
+
+@dp.message(F.text.in_(["🪙 Use Coins", "🪙 Использовать монеты"]))
+async def cmd_use_coins_menu(message: types.Message):
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    coins = await get_user_coins(user_id)
+    text = get_text("use_coins_text", lang, coins=coins)
+    await message.answer(text, reply_markup=get_use_coins_keyboard(lang), parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("buy_shop:"))
 async def cb_buy_shop(callback: types.CallbackQuery):
@@ -509,13 +539,31 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
 async def cb_ref_info(callback: types.CallbackQuery, bot: Bot):
     await cmd_invite_center(callback, bot)
 
-@dp.callback_query(F.data == "buy_prem_stars")
+@dp.callback_query(F.data.in_(["buy_prem_stars"]) | F.data.startswith("buy_stars:"))
 async def cb_buy_stars(callback: types.CallbackQuery):
-    prices = [types.LabeledPrice(label="⭐ 30 kun VIP Premium", amount=50)]
+    option = callback.data.split(":")[1] if ":" in callback.data else "1m"
+    lang = await get_user_language(callback.from_user.id)
+    if option == "1m":
+        amount, days, label = 50, 30, ("⭐ 1 oy VIP Premium" if lang == 'uz' else ("⭐ 1 месяц VIP Premium" if lang == 'ru' else "⭐ 1 Month VIP Premium"))
+        payload = "prem_30_days"
+    elif option == "2m":
+        amount, days, label = 90, 60, ("⭐ 2 oy VIP Premium (-10%)" if lang == 'uz' else ("⭐ 2 месяца VIP Premium (-10%)" if lang == 'ru' else "⭐ 2 Months VIP Premium (-10%)"))
+        payload = "prem_60_days"
+    elif option == "3m":
+        amount, days, label = 130, 90, ("⭐ 3 oy VIP Premium (-15%)" if lang == 'uz' else ("⭐ 3 месяца VIP Premium (-15%)" if lang == 'ru' else "⭐ 3 Months VIP Premium (-15%)"))
+        payload = "prem_90_days"
+    else:
+        return
+
+    prices = [types.LabeledPrice(label=label, amount=amount)]
+    desc = "Cheksiz yuklash, 1080p/4K sifat, navbatsiz super-tezkor yuklash va hech qanday reklamasiz!" if lang == 'uz' else (
+        "Безлимитные скачивания, 1080p/4K качество, загрузка без очереди и рекламы!" if lang == 'ru' else
+        "Unlimited downloads, 1080p/4K quality, priority high-speed downloads without ads!"
+    )
     await callback.message.answer_invoice(
-        title="⭐ VIP Premium (30 kun)",
-        description="Cheksiz yuklash, 1080p/4K sifat, navbatsiz super-tezkor yuklash va hech qanday reklamasiz!",
-        payload="prem_30_days",
+        title=label,
+        description=desc,
+        payload=payload,
         provider_token="",
         currency="XTR",
         prices=prices
@@ -529,10 +577,16 @@ async def pre_checkout_handler(pre_checkout_query: types.PreCheckoutQuery):
 @dp.message(F.successful_payment)
 async def successful_payment_handler(message: types.Message):
     user_id = message.from_user.id
-    await grant_premium(user_id, 30)
+    payload = message.successful_payment.invoice_payload
+    days = 30
+    if payload == "prem_60_days":
+        days = 60
+    elif payload == "prem_90_days":
+        days = 90
+    await grant_premium(user_id, days)
     await message.answer(
-        "🎉 **Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.**\n\n"
-        "Sizga **30 kunlik ⭐ VIP Premium** obuna taqdim etildi!\n"
+        f"🎉 **Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.**\n\n"
+        f"Sizga **{days} kunlik ⭐ VIP Premium** obuna taqdim etildi!\n"
         "Endi cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning. 🚀",
         parse_mode="Markdown"
     )

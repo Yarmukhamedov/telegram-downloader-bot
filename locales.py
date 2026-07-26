@@ -29,9 +29,9 @@ MESSAGES = {
         "en": "👥 Invite Center"
     },
     "btn_shop_redeem": {
-        "uz": "🛍 Do'kon va Promokod",
-        "ru": "🛍 Магазин и Промокоды",
-        "en": "🛍 Shop & Redeem"
+        "uz": "🛍 Do'kon",
+        "ru": "🛍 Магазин",
+        "en": "🛍 Shop"
     },
     "btn_balance": {
         "uz": "🪙 Balans (Coinlar)",
@@ -39,9 +39,19 @@ MESSAGES = {
         "en": "🪙 Balance (Coins)"
     },
     "btn_back": {
-        "uz": "🔙 Orqaga",
-        "ru": "🔙 Назад",
-        "en": "🔙 Back"
+        "uz": "⬅️ Orqaga",
+        "ru": "⬅️ Назад",
+        "en": "⬅️ Back"
+    },
+    "btn_buy_prem_menu": {
+        "uz": "👑 Buy Premium",
+        "ru": "👑 Купить Premium",
+        "en": "👑 Buy Premium"
+    },
+    "btn_use_coins": {
+        "uz": "🪙 Use Coins",
+        "ru": "🪙 Использовать монеты",
+        "en": "🪙 Use Coins"
     },
     "btn_language": {
         "uz": "🌐 Til / Язык / Language",
@@ -219,6 +229,70 @@ MESSAGES = {
             "• 👥 Invite friends via **Invite Center** (+100 Coins per referral).\n"
             "• 🎁 Redeem special **Promo Codes** from admins.\n\n"
             "🛍 You can exchange Coins for VIP Premium and extra limits in the **Shop**!"
+        )
+    },
+    "buy_premium_text": {
+        "uz": (
+            "👑 **VIP Premium Obunasi — Telegram Stars ⭐ orqali**\n\n"
+            "💎 **VIP Premium obunachilariga nimalar beriladi?**\n"
+            "• 🚀 **Cheksiz yuklashlar:** Kunlik limitlarsiz istalgancha video torting.\n"
+            "• 🎬 **Eng yuqori sifat:** 1080p Full HD va 4K Ultra HD videolarni yuklash imkoniyati.\n"
+            "• ⚡️ **Navbatsiz super-tezkor oqim:** Veb-serverlarning maksimal tezligida yuklab beradi.\n"
+            "• 🚫 **To'liq reklamasiz:** Hech qanday bezovta qiluvchi xabarlar va reklamalar bo'lmaydi.\n\n"
+            "📌 *Shartlar:* Xarid Telegram'ning rasmiy **Telegram Stars ⭐** tizimi orqali 100% xavfsiz amalga oshiriladi. Obuna muddati tugagach, uni xohlagan payt uzaytirishingiz mumkin.\n\n"
+            "👇 **O'zingizga ma'qul bo'lgan muddatni tanlang:**"
+        ),
+        "ru": (
+            "👑 **Подписка VIP Premium — через Telegram Stars ⭐**\n\n"
+            "💎 **Что даёт статус VIP Premium?**\n"
+            "• 🚀 **Безлимитные скачивания:** Никаких суточных ограничений.\n"
+            "• 🎬 **Максимальное качество:** Доступ к 1080p Full HD и 4K Ultra HD.\n"
+            "• ⚡️ **Приоритетная скорость:** Скачивание без очередей на максимальной скорости.\n"
+            "• 🚫 **Полная свобода от рекламы:** Никаких спонсорских сообщений.\n\n"
+            "📌 *Условия:* Оплата происходит безопасно через официальную валюту **Telegram Stars ⭐**. После окончания срока можно продлить в любое время.\n\n"
+            "👇 **Выберите подходящий период подписки:**"
+        ),
+        "en": (
+            "👑 **VIP Premium Subscription — via Telegram Stars ⭐**\n\n"
+            "💎 **What do you get with VIP Premium?**\n"
+            "• 🚀 **Unlimited Downloads:** No daily download restrictions.\n"
+            "• 🎬 **Highest Quality:** Unlock 1080p Full HD and 4K Ultra HD downloads.\n"
+            "• ⚡️ **Priority High-Speed:** Bypass queues with VIP server speeds.\n"
+            "• 🚫 **Ad-Free Experience:** Zero ads or sponsored messages.\n\n"
+            "📌 *Terms:* Purchases are 100% securely processed via **Telegram Stars ⭐**. You can extend your subscription at any time.\n\n"
+            "👇 **Select your preferred subscription period:**"
+        )
+    },
+    "use_coins_text": {
+        "uz": (
+            "🪙 **Coinlar evaziga VIP Premium va Limitlar xaridi**\n\n"
+            "💰 **Sizning joriy balansingiz:** **{coins} 🪙 Coin**\n\n"
+            "💎 **Coinlaringizni nimalarga sarflash mumkin?**\n"
+            "• 👑 **VIP Premium (7 kun):** 300 Coin — 1 haftalik to'liq VIP imtiyozlari (1080p/4K, cheksiz, navbatsiz).\n"
+            "• 👑 **VIP Premium (30 kun):** 1,000 Coin — 1 oylik to'liq VIP imtiyozlari.\n"
+            "• ⚡️ **+50 Kunlik Limit:** 50 Coin — Oddiy tarifda bugun uchun qo'shimcha 50 ta video yuklash limiti.\n\n"
+            "📌 *Shartlar:* Coinlarni **Invite Center** orqali do'stlaringizni taklif qilish (+100 Coin) yoki adminlar bergan **Promokodlar**ni kiritish orqali bepul yig'ishingiz mumkin.\n\n"
+            "👇 **Quyidagi paketlardan birini tanlang:**"
+        ),
+        "ru": (
+            "🪙 **Покупка VIP Premium и Лимитов за Монеты**\n\n"
+            "💰 **Ваш текущий баланс:** **{coins} 🪙 Монет**\n\n"
+            "💎 **На что можно потратить Монеты?**\n"
+            "• 👑 **VIP Premium (7 дней):** 300 Монет — 1 неделя всех VIP привилегий (1080p/4K, безлимит, без очереди).\n"
+            "• 👑 **VIP Premium (30 дней):** 1,000 Монет — 1 месяц всех VIP привилегий.\n"
+            "• ⚡️ **+50 Лимит скачиваний:** 50 Монет — дополнительные 50 скачиваний на сегодня.\n\n"
+            "📌 *Условия:* Зарабатывайте Монеты бесплатно приглашая друзей через **Invite Center** (+100 Монет) или активируя **Промокоды** от администрации.\n\n"
+            "👇 **Выберите желаемый пакет ниже:**"
+        ),
+        "en": (
+            "🪙 **Buy VIP Premium & Limits using Coins**\n\n"
+            "💰 **Your current balance:** **{coins} 🪙 Coins**\n\n"
+            "💎 **What can you get with Coins?**\n"
+            "• 👑 **VIP Premium (7 Days):** 300 Coins — 1 week of full VIP perks (1080p/4K, unlimited, priority queue).\n"
+            "• 👑 **VIP Premium (30 Days):** 1,000 Coins — 1 month of full VIP perks.\n"
+            "• ⚡️ **+50 Daily Limit:** 50 Coins — add +50 extra video download limit for today.\n\n"
+            "📌 *Terms:* Earn Coins for free by inviting friends via **Invite Center** (+100 Coins per friend) or activating admin **Promo Codes**.\n\n"
+            "👇 **Choose a package below:**"
         )
     },
     "back_main_menu": {
