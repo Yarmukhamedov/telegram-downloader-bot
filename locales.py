@@ -155,34 +155,25 @@ MESSAGES = {
     # Profile & Shop
     "profile_text": {
         "uz": (
-            "👤 **Sizning Profilingiz va Tarif**\n\n"
-            "🆔 **ID:** `{user_id}`\n"
-            "👤 **Ism:** {full_name}\n"
-            "👑 **Tarifingiz:** {status_str}\n"
-            "🪙 **Balansingiz:** **{coins} 🪙 Coin**\n"
-            "📥 **Bugungi yuklashlar:** {daily_downloads} / {daily_limit}\n"
-            "⚙️ **Tanlangan sifat:** {pref_q}\n\n"
-            "💎 *VIP Premium imtiyozlari:* Cheksiz yuklash, 1080p/4K sifat, navbatsiz super-tezkor yuklash va reklamasiz!"
+            "👤 **Sizning Profilingiz**\n\n"
+            "**ID:** `{user_id}`\n"
+            "**Ism:** {full_name}\n\n"
+            "**Tarif:** {status_str}\n"
+            "**Bugungi yuklashlar:** {daily_downloads}/{daily_limit}"
         ),
         "ru": (
-            "👤 **Ваш Профиль и Тариф**\n\n"
-            "🆔 **ID:** `{user_id}`\n"
-            "👤 **Имя:** {full_name}\n"
-            "👑 **Тариф:** {status_str}\n"
-            "🪙 **Баланс:** **{coins} 🪙 Монет**\n"
-            "📥 **Скачиваний сегодня:** {daily_downloads} / {daily_limit}\n"
-            "⚙️ **Качество:** {pref_q}\n\n"
-            "💎 *Преимущества VIP Premium:* Безлимит, 1080p/4K, супер-скорость без очереди и рекламы!"
+            "👤 **Ваш Профиль**\n\n"
+            "**ID:** `{user_id}`\n"
+            "**Имя:** {full_name}\n\n"
+            "**Тариф:** {status_str}\n"
+            "**Скачиваний сегодня:** {daily_downloads}/{daily_limit}"
         ),
         "en": (
-            "👤 **Your Profile & Plan**\n\n"
-            "🆔 **ID:** `{user_id}`\n"
-            "👤 **Name:** {full_name}\n"
-            "👑 **Plan:** {status_str}\n"
-            "🪙 **Balance:** **{coins} 🪙 Coins**\n"
-            "📥 **Downloads Today:** {daily_downloads} / {daily_limit}\n"
-            "⚙️ **Quality:** {pref_q}\n\n"
-            "💎 *VIP Premium Benefits:* Unlimited downloads, 1080p/4K, priority no-queue high-speed downloads without ads!"
+            "👤 **Your Profile**\n\n"
+            "**ID:** `{user_id}`\n"
+            "**Name:** {full_name}\n\n"
+            "**Plan:** {status_str}\n"
+            "**Downloads today:** {daily_downloads}/{daily_limit}"
         )
     },
     "shop_text": {
