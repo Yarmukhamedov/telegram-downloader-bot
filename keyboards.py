@@ -9,10 +9,6 @@ def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboard
             KeyboardButton(text=get_text("btn_profile", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_invite_center", lang)),
-            KeyboardButton(text=get_text("btn_shop_redeem", lang))
-        ],
-        [
             KeyboardButton(text=get_text("btn_help", lang)),
             KeyboardButton(text=get_text("btn_language", lang))
         ]
