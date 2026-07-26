@@ -88,9 +88,7 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
 def get_profile_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text=get_text("btn_invite_center", lang), callback_data="invite_center_menu")],
-        [InlineKeyboardButton(text=get_text("btn_shop_redeem", lang), callback_data="shop_menu")],
-        [InlineKeyboardButton(text=get_text("btn_buy_stars", lang), callback_data="buy_prem_stars")],
-        [InlineKeyboardButton(text=get_text("btn_buy_card", lang), callback_data="buy_prem_card")]
+        [InlineKeyboardButton(text=get_text("btn_shop_redeem", lang), callback_data="shop_menu")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
