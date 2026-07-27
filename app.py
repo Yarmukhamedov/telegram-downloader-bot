@@ -103,6 +103,17 @@ async def cmd_start(message: types.Message, bot: Bot):
     welcome_text = get_text("welcome", lang, name=message.from_user.first_name, bot_name=bot_info.first_name)
     await message.answer(welcome_text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
+async def delete_menu_and_user_msg(callback: types.CallbackQuery, user_msg_id: int):
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    if user_msg_id > 0:
+        try:
+            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
+        except Exception:
+            pass
+
 @dp.message(Command("lang"))
 @dp.message(F.text.in_(["🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language", "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык"]))
 @dp.callback_query(F.data == "change_lang_menu")
@@ -110,19 +121,22 @@ async def cmd_change_lang(event: types.Message | types.CallbackQuery):
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
     lang = await get_user_language(user_id)
-    await msg.answer(get_text("lang_select_prompt", lang), reply_markup=get_language_keyboard())
+    user_msg_id = event.message_id if isinstance(event, types.Message) else 0
+    await msg.answer(get_text("lang_select_prompt", lang), reply_markup=get_language_keyboard(user_msg_id))
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
 @dp.callback_query(F.data.startswith("set_lang:"))
 async def cb_set_lang(callback: types.CallbackQuery):
-    new_lang = callback.data.split(":")[1]
+    parts = callback.data.split(":")
+    new_lang = parts[1]
+    user_msg_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
     await set_user_language(callback.from_user.id, new_lang)
     admin_ids = get_admin_ids()
     is_admin = callback.from_user.id in admin_ids
     
+    await delete_menu_and_user_msg(callback, user_msg_id)
     await callback.message.answer(get_text("lang_changed", new_lang), reply_markup=get_main_keyboard(is_admin, new_lang), parse_mode="Markdown")
-    await callback.message.delete()
     await callback.answer()
 
 @dp.message(Command("settings"))
@@ -161,21 +175,13 @@ async def cb_set_quality(callback: types.CallbackQuery):
             "🔒 1080p Full HD and 4K Ultra HD downloading is available exclusively for Premium users!\n\n🛍 Upgrade to Premium below for unlimited downloads and highest quality!")
         )
         await callback.answer(alert_msg, show_alert=True)
+        await delete_menu_and_user_msg(callback, user_msg_id)
         text = get_text("buy_premium_text", lang)
-        await callback.message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang), parse_mode="Markdown")
+        await callback.message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang, user_msg_id), parse_mode="Markdown")
         return
     await update_user_quality(callback.from_user.id, quality)
     
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        logger.warning(f"Could not delete quality menu message: {e}")
-
-    if user_msg_id > 0:
-        try:
-            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
-        except Exception as e:
-            logger.warning(f"Could not delete user trigger message: {e}")
+    await delete_menu_and_user_msg(callback, user_msg_id)
 
     lang = await get_user_language(callback.from_user.id)
     q_map = {'best': "1080p / 4K", '720p': "720p HD", '480p': "480p SD", 'mp3': "MP3 Audio", 'ask': "❓ Ask"}
@@ -190,15 +196,7 @@ async def cb_set_quality(callback: types.CallbackQuery):
 async def cb_close_quality(callback: types.CallbackQuery):
     parts = callback.data.split(":")
     user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        pass
-    if user_msg_id > 0:
-        try:
-            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
-        except Exception as e:
-            pass
+    await delete_menu_and_user_msg(callback, user_msg_id)
     await callback.answer()
 
 @dp.message(F.text.in_(["👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan"]))
@@ -276,6 +274,15 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
         text = get_text("back_main_menu", lang)
         await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
+@dp.message(F.text.in_(["🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]))
+async def cmd_home_main(message: types.Message, state: FSMContext):
+    await state.clear()
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    is_admin = user_id in get_admin_ids()
+    text = get_text("back_main_menu", lang)
+    await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
+
 @dp.message(F.text.in_(["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center"]))
 @dp.callback_query(F.data == "invite_center_menu")
 async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: FSMContext, bot: Bot):
@@ -338,7 +345,7 @@ async def cmd_buy_premium_menu(message: types.Message):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
     text = get_text("buy_premium_text", lang)
-    await message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang, message.message_id), parse_mode="Markdown")
 
 @dp.message(F.text.in_(["🪙 Use Coins", "🪙 Использовать монеты"]))
 async def cmd_use_coins_menu(message: types.Message):
@@ -346,11 +353,13 @@ async def cmd_use_coins_menu(message: types.Message):
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     text = get_text("use_coins_text", lang, coins=coins)
-    await message.answer(text, reply_markup=get_use_coins_keyboard(lang), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_use_coins_keyboard(lang, message.message_id), parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("buy_shop:"))
 async def cb_buy_shop(callback: types.CallbackQuery):
-    item = callback.data.split(":")[1]
+    parts = callback.data.split(":")
+    item = parts[1]
+    user_msg_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
     user_id = callback.from_user.id
     coins = await get_user_coins(user_id)
     lang = await get_user_language(user_id)
@@ -365,6 +374,7 @@ async def cb_buy_shop(callback: types.CallbackQuery):
         await callback.answer(msg, show_alert=True)
         return
         
+    await delete_menu_and_user_msg(callback, user_msg_id)
     await add_user_coins(user_id, -cost)
     if item == "vip7":
         await grant_premium(user_id, 7)
@@ -453,6 +463,7 @@ async def handle_media_download(message: types.Message, bot: Bot):
         "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
         "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
         "🔙 Orqaga", "🔙 Назад", "🔙 Back", "⬅️ Orqaga", "⬅️ Назад", "⬅️ Back",
+        "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu",
         "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"
     ]:
         return
@@ -501,7 +512,7 @@ async def handle_media_download(message: types.Message, bot: Bot):
         
         await message.answer(
             f"{icon} *{platform} havolasi qabul qilindi!*\nSifat yoki formatni tanlang:",
-            reply_markup=get_quality_selector_keyboard(url, is_premium=is_premium, lang=lang),
+            reply_markup=get_quality_selector_keyboard(url, is_premium=is_premium, lang=lang, user_msg_id=message.message_id),
             parse_mode="Markdown"
         )
         return
@@ -513,6 +524,7 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
     parts = callback.data.split(":")
     url_hash = parts[1]
     quality = parts[2]
+    user_msg_id = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 0
 
     user = await get_or_create_user(callback.from_user.id)
     is_admin = callback.from_user.id in get_admin_ids()
@@ -525,8 +537,9 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
             "🔒 1080p Full HD and 4K Ultra HD downloading is available exclusively for Premium users!\n\n🛍 Upgrade to Premium below for unlimited downloads and highest quality!")
         )
         await callback.answer(alert_msg, show_alert=True)
+        await delete_menu_and_user_msg(callback, user_msg_id)
         text = get_text("buy_premium_text", lang)
-        await callback.message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang), parse_mode="Markdown")
+        await callback.message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang, user_msg_id), parse_mode="Markdown")
         return
 
     url = url_cache.get(url_hash)
@@ -535,7 +548,7 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
         return
 
     platform, icon, _ = detect_platform_and_url(url)
-    await callback.message.delete()
+    await delete_menu_and_user_msg(callback, user_msg_id)
     await process_and_send_media(callback.message, url, platform or "Media", icon or "📹", quality, bot)
     await callback.answer()
 
@@ -657,7 +670,9 @@ async def cb_ref_info(callback: types.CallbackQuery, bot: Bot):
 
 @dp.callback_query(F.data.in_(["buy_prem_stars"]) | F.data.startswith("buy_stars:"))
 async def cb_buy_stars(callback: types.CallbackQuery):
-    option = callback.data.split(":")[1] if ":" in callback.data else "1m"
+    parts = callback.data.split(":")
+    option = parts[1] if len(parts) > 1 else "1m"
+    user_msg_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
     lang = await get_user_language(callback.from_user.id)
     if option == "1m":
         amount, days, label = 50, 30, ("⭐ 1 oy Premium" if lang == 'uz' else ("⭐ 1 месяц Premium" if lang == 'ru' else "⭐ 1 Month Premium"))
@@ -676,6 +691,7 @@ async def cb_buy_stars(callback: types.CallbackQuery):
         "Безлимитные скачивания, 1080p/4K качество, загрузка без очереди и рекламы!" if lang == 'ru' else
         "Unlimited downloads, 1080p/4K quality, priority high-speed downloads without ads!"
     )
+    await delete_menu_and_user_msg(callback, user_msg_id)
     await callback.message.answer_invoice(
         title=label,
         description=desc,

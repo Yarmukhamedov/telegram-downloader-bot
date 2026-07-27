@@ -17,6 +17,12 @@ def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboard
         buttons.append([KeyboardButton(text=get_text("btn_admin", lang))])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
+def get_admin_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    buttons = [
+        [KeyboardButton(text=get_text("btn_main_menu", lang))]
+    ]
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
 def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
@@ -27,7 +33,8 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_shop_redeem", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_back", lang))
+            KeyboardButton(text=get_text("btn_back", lang)),
+            KeyboardButton(text=get_text("btn_main_menu", lang))
         ]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
@@ -39,17 +46,18 @@ def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_invite_stats", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_back", lang))
+            KeyboardButton(text=get_text("btn_back", lang)),
+            KeyboardButton(text=get_text("btn_main_menu", lang))
         ]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
-def get_language_keyboard() -> InlineKeyboardMarkup:
+def get_language_keyboard(user_msg_id: int = 0) -> InlineKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="set_lang:uz"),
-            InlineKeyboardButton(text="🇷🇺 Русский", callback_data="set_lang:ru"),
-            InlineKeyboardButton(text="🇬🇧 English", callback_data="set_lang:en")
+            InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data=f"set_lang:uz:{user_msg_id}"),
+            InlineKeyboardButton(text="🇷🇺 Русский", callback_data=f"set_lang:ru:{user_msg_id}"),
+            InlineKeyboardButton(text="🇬🇧 English", callback_data=f"set_lang:en:{user_msg_id}")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -85,7 +93,7 @@ def get_force_sub_keyboard(channel_link: str, lang: str = "uz") -> InlineKeyboar
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_quality_selector_keyboard(video_url: str, is_premium: bool = False, lang: str = "uz") -> InlineKeyboardMarkup:
+def get_quality_selector_keyboard(video_url: str, is_premium: bool = False, lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
     url_hash = hashlib.md5(video_url.encode()).hexdigest()[:10]
     if is_premium:
         best_str = "🎬 Eng yuqori (1080p / 4K)" if lang == 'uz' else ("🎬 Максимальное (1080p / 4K)" if lang == 'ru' else "🎬 Highest (1080p / 4K)")
@@ -97,12 +105,12 @@ def get_quality_selector_keyboard(video_url: str, is_premium: bool = False, lang
 
     buttons = [
         [
-            InlineKeyboardButton(text=best_str, callback_data=f"download_q:{url_hash}:best"),
-            InlineKeyboardButton(text=hd_str, callback_data=f"download_q:{url_hash}:720p")
+            InlineKeyboardButton(text=best_str, callback_data=f"download_q:{url_hash}:best:{user_msg_id}"),
+            InlineKeyboardButton(text=hd_str, callback_data=f"download_q:{url_hash}:720p:{user_msg_id}")
         ],
         [
-            InlineKeyboardButton(text=sd_str, callback_data=f"download_q:{url_hash}:480p"),
-            InlineKeyboardButton(text=mp3_str, callback_data=f"download_q:{url_hash}:mp3")
+            InlineKeyboardButton(text=sd_str, callback_data=f"download_q:{url_hash}:480p:{user_msg_id}"),
+            InlineKeyboardButton(text=mp3_str, callback_data=f"download_q:{url_hash}:mp3:{user_msg_id}")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -114,16 +122,19 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📢 Xabar yuborish", callback_data="admin_broadcast")
         ],
         [
-            InlineKeyboardButton(text="⚙️ Obuna kanali", callback_data="admin_channel"),
-            InlineKeyboardButton(text="👑 Premium berish", callback_data="admin_premium")
+            InlineKeyboardButton(text="🎟 Promokodlar", callback_data="admin_promos"),
+            InlineKeyboardButton(text="👥 Foydalanuvchi b-n ishlash", callback_data="admin_user_manage")
+        ],
+        [
+            InlineKeyboardButton(text="📢 Majburiy obuna kanali", callback_data="admin_channel")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_profile_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    btn_text = "🔗 Taklif havolasini olish" if lang == 'uz' else ("🔗 Получить реф. ссылку" if lang == 'ru' else "🔗 Get Invite Link")
     buttons = [
-        [InlineKeyboardButton(text=get_text("btn_invite_center", lang), callback_data="invite_center_menu")],
-        [InlineKeyboardButton(text=get_text("btn_shop_redeem", lang), callback_data="shop_menu")]
+        [InlineKeyboardButton(text=btn_text, callback_data="show_invite_link")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -133,7 +144,6 @@ def get_invite_center_keyboard(ref_link: str, lang: str = "uz") -> InlineKeyboar
         "🚀 Best video downloader bot! High quality without watermarks!"
     )
     btn_share = "📤 Havolani do'stlarga yuborish" if lang == 'uz' else ("📤 Поделиться ссылкой" if lang == 'ru' else "📤 Share Link with Friends")
-    btn_shop = "🛍 Do'konga o'tish" if lang == 'uz' else ("🛍 Перейти в магазин" if lang == 'ru' else "🛍 Go to Shop")
     
     from urllib.parse import quote
     share_url = f"https://t.me/share/url?url={quote(ref_link)}&text={quote(share_text)}"
@@ -144,47 +154,45 @@ def get_invite_center_keyboard(ref_link: str, lang: str = "uz") -> InlineKeyboar
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    t_prem = "👑 Buy Premium"
+    t_coins = "🪙 Use Coins"
+    t_redeem = "🎟 Promokod kiritish (Redeem Code)" if lang == 'uz' else ("🎟 Ввести промокод (Redeem Code)" if lang == 'ru' else "🎟 Enter Redeem Code")
+    t_back = "⬅️ Orqaga" if lang == 'uz' else ("⬅️ Назад" if lang == 'ru' else "⬅️ Back")
+    
     buttons = [
-        [
-            KeyboardButton(text=get_text("btn_buy_prem_menu", lang)),
-            KeyboardButton(text=get_text("btn_use_coins", lang))
-        ],
-        [
-            KeyboardButton(text=get_text("btn_redeem_code", lang))
-        ],
-        [
-            KeyboardButton(text=get_text("btn_back", lang))
-        ]
+        [KeyboardButton(text=t_prem), KeyboardButton(text=t_coins)],
+        [KeyboardButton(text=t_redeem)],
+        [KeyboardButton(text=t_back), KeyboardButton(text=get_text("btn_main_menu", lang))]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
-def get_shop_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+def get_shop_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data="buy_shop:vip7")],
-        [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data="buy_shop:vip30")],
-        [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data="buy_shop:limit")],
+        [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data=f"buy_shop:vip7:{user_msg_id}")],
+        [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data=f"buy_shop:vip30:{user_msg_id}")],
+        [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data=f"buy_shop:limit:{user_msg_id}")],
         [InlineKeyboardButton(text=get_text("btn_redeem_code", lang), callback_data="redeem_code_prompt")],
-        [InlineKeyboardButton(text=get_text("btn_buy_stars", lang), callback_data="buy_prem_stars")],
+        [InlineKeyboardButton(text=get_text("btn_buy_stars", lang), callback_data=f"buy_prem_stars:1m:{user_msg_id}")],
         [InlineKeyboardButton(text=get_text("btn_buy_card", lang), callback_data="buy_prem_card")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_buy_prem_stars_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+def get_buy_prem_stars_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
     t1 = "1 oy — 50 ⭐" if lang == 'uz' else ("1 месяц — 50 ⭐" if lang == 'ru' else "1 Month — 50 ⭐")
     t2 = "2 oy — 90 ⭐ (-10%)" if lang == 'uz' else ("2 месяца — 90 ⭐ (-10%)" if lang == 'ru' else "2 Months — 90 ⭐ (-10%)")
     t3 = "3 oy — 130 ⭐ (-15%)" if lang == 'uz' else ("3 месяца — 130 ⭐ (-15%)" if lang == 'ru' else "3 Months — 130 ⭐ (-15%)")
     buttons = [
-        [InlineKeyboardButton(text=t1, callback_data="buy_stars:1m")],
-        [InlineKeyboardButton(text=t2, callback_data="buy_stars:2m")],
-        [InlineKeyboardButton(text=t3, callback_data="buy_stars:3m")]
+        [InlineKeyboardButton(text=t1, callback_data=f"buy_stars:1m:{user_msg_id}")],
+        [InlineKeyboardButton(text=t2, callback_data=f"buy_stars:2m:{user_msg_id}")],
+        [InlineKeyboardButton(text=t3, callback_data=f"buy_stars:3m:{user_msg_id}")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_use_coins_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+def get_use_coins_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data="buy_shop:vip7")],
-        [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data="buy_shop:vip30")],
-        [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data="buy_shop:limit")]
+        [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data=f"buy_shop:vip7:{user_msg_id}")],
+        [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data=f"buy_shop:vip30:{user_msg_id}")],
+        [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data=f"buy_shop:limit:{user_msg_id}")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

@@ -6,8 +6,8 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting, create_redeem_code
-from keyboards import get_admin_keyboard
+from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting, create_redeem_code, get_user_language
+from keyboards import get_admin_keyboard, get_admin_reply_keyboard
 
 logger = logging.getLogger(__name__)
 admin_router = Router()
@@ -35,6 +35,8 @@ async def cmd_admin_panel(message: types.Message):
         return
 
     try:
+        lang = await get_user_language(message.from_user.id)
+        await message.answer("👨‍💻 *Admin bo'limi:*", reply_markup=get_admin_reply_keyboard(lang), parse_mode="Markdown")
         stats = await get_admin_stats()
         text = (
             "🛠 *Admin Boshqaruv Paneli*\n\n"
@@ -86,6 +88,11 @@ async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_broadcast)
 async def handle_broadcast_message(message: types.Message, state: FSMContext, bot: Bot):
+    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+        await state.clear()
+        from app import cmd_home_main
+        await cmd_home_main(message, state)
+        return
     await state.clear()
     user_ids = await get_all_user_ids()
     
@@ -133,6 +140,11 @@ async def cb_admin_channel(callback: types.CallbackQuery, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_channel)
 async def handle_channel_input(message: types.Message, state: FSMContext):
+    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+        await state.clear()
+        from app import cmd_home_main
+        await cmd_home_main(message, state)
+        return
     await state.clear()
     text = message.text.strip()
     
@@ -170,6 +182,11 @@ async def cb_admin_premium(callback: types.CallbackQuery, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_premium_input)
 async def handle_premium_input(message: types.Message, state: FSMContext):
+    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+        await state.clear()
+        from app import cmd_home_main
+        await cmd_home_main(message, state)
+        return
     await state.clear()
     parts = message.text.strip().split()
     if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():

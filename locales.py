@@ -53,6 +53,11 @@ MESSAGES = {
         "ru": "⬅️ Назад",
         "en": "⬅️ Back"
     },
+    "btn_main_menu": {
+        "uz": "🏠 Bosh Menu",
+        "ru": "🏠 Главное меню",
+        "en": "🏠 Main Menu"
+    },
     "btn_buy_prem_menu": {
         "uz": "👑 Buy Premium",
         "ru": "👑 Купить Premium",
