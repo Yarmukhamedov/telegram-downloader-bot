@@ -8,6 +8,14 @@ DB_PATH = os.getenv("DB_PATH", "bot_database.db")
 if os.path.dirname(DB_PATH):
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
+def is_user_admin(user_id: int) -> bool:
+    admin_env = os.getenv("ADMIN_IDS", "")
+    for item in admin_env.split(","):
+        item = item.strip()
+        if item.isdigit() and int(item) == user_id:
+            return True
+    return False
+
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
@@ -120,7 +128,7 @@ async def register_user_with_referral(user_id: int, username: str = None, full_n
 
             await db.execute("""
                 INSERT INTO users (user_id, username, full_name, preferred_quality, is_premium, daily_downloads, last_download_date, joined_at, referred_by, referral_count, coins, language)
-                VALUES (?, ?, ?, 'best', 0, 0, ?, ?, ?, 0, 0, 'uz')
+                VALUES (?, ?, ?, '720p', 0, 0, ?, ?, ?, 0, 0, 'uz')
             """, (user_id, username, full_name, today_str, now_str, valid_ref_id))
             await db.commit()
             
@@ -130,6 +138,8 @@ async def register_user_with_referral(user_id: int, username: str = None, full_n
             if username != user['username'] or full_name != user['full_name']:
                 await db.execute("UPDATE users SET username = ?, full_name = ? WHERE user_id = ?", (username, full_name, user_id))
                 await db.commit()
+                async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                    user = await cursor.fetchone()
 
         # Check premium expiration
         is_premium = user['is_premium']
@@ -148,14 +158,23 @@ async def register_user_with_referral(user_id: int, username: str = None, full_n
         else:
             daily_downloads = user['daily_downloads']
 
+        is_admin = is_user_admin(user_id)
+        if is_admin:
+            is_premium = 1
+        pref_q = user['preferred_quality'] or '720p'
+        if pref_q == 'best' and not (is_premium or is_admin):
+            pref_q = '720p'
+            await db.execute("UPDATE users SET preferred_quality = '720p' WHERE user_id = ?", (user_id,))
+            await db.commit()
+
         user_dict = {
             "user_id": user['user_id'],
             "username": user['username'],
             "full_name": user['full_name'],
-            "preferred_quality": user['preferred_quality'] or 'best',
-            "is_premium": bool(is_premium),
-            "premium_until": user['premium_until'],
-            "daily_downloads": daily_downloads,
+            "preferred_quality": pref_q,
+            "is_premium": bool(is_premium or is_admin),
+            "premium_until": "9999-12-31T23:59:59" if is_admin else user['premium_until'],
+            "daily_downloads": 0 if is_admin else daily_downloads,
             "joined_at": user['joined_at'],
             "referred_by": user['referred_by'],
             "referral_count": user['referral_count'] or 0,
@@ -190,6 +209,8 @@ async def record_download(user_id: int, url: str, platform: str, format_type: st
 
 async def check_daily_limit(user_id: int, free_limit: int = 15) -> tuple[bool, int]:
     """Returns (can_download, current_usage)"""
+    if is_user_admin(user_id):
+        return True, 0
     user = await get_or_create_user(user_id)
     if user['is_premium']:
         return True, user['daily_downloads']

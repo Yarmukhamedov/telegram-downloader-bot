@@ -131,7 +131,11 @@ async def cb_set_lang(callback: types.CallbackQuery):
 async def cmd_settings(message: types.Message):
     logger.info(f">>> Sifat/Quality clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id)
+    is_admin = message.from_user.id in get_admin_ids()
+    is_premium = user['is_premium'] or is_admin
     quality = user['preferred_quality']
+    if quality == 'best' and not is_premium:
+        quality = '720p'
     lang = user.get('language', 'uz')
     
     text = (
@@ -139,13 +143,19 @@ async def cmd_settings(message: types.Message):
         "🎬 *Выбор качества видео*\n\nВыберите качество для загрузки видео:" if lang == 'ru' else
         "🎬 *Select Video Quality*\n\nSelect preferred video download quality:")
     )
-    await message.answer(text, reply_markup=get_settings_keyboard(quality, lang, message.message_id), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_settings_keyboard(quality, lang, message.message_id, is_premium=is_premium), parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("set_quality:"))
 async def cb_set_quality(callback: types.CallbackQuery):
     parts = callback.data.split(":")
     quality = parts[1]
     user_msg_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+    user = await get_or_create_user(callback.from_user.id)
+    is_admin = callback.from_user.id in get_admin_ids()
+    is_premium = user['is_premium'] or is_admin
+    if quality == 'best' and not is_premium:
+        await callback.answer("⭐ 1080p va 4K sifat faqat Premium foydalanuvchilar uchun! 🛍 Do'kondan Premium oling.", show_alert=True)
+        return
     await update_user_quality(callback.from_user.id, quality)
     
     try:
@@ -190,8 +200,16 @@ async def cmd_profile(message: types.Message, state: FSMContext):
     user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
     lang = user.get('language', 'uz')
     
-    status_str = f"⭐ Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
-    daily_limit = ("Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")) if user['is_premium'] else "15"
+    is_admin = message.from_user.id in get_admin_ids()
+    if is_admin:
+        status_str = "⭐ Premium (Cheksiz)" if lang == 'uz' else ("⭐ Premium (Безлимит)" if lang == 'ru' else "⭐ Premium (Unlimited)")
+        daily_limit = "Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")
+    elif user['is_premium']:
+        status_str = f"⭐ Premium ({user['premium_until'][:10]})" if user['premium_until'] and user['premium_until'] != "9999-12-31T23:59:59" else "⭐ Premium"
+        daily_limit = "Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")
+    else:
+        status_str = "🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")
+        daily_limit = "15"
     
     q_map = {
         'best': "🎬 1080p / 4K",
@@ -200,11 +218,12 @@ async def cmd_profile(message: types.Message, state: FSMContext):
         'mp3': "🎵 MP3 Audio",
         'ask': "❓ Ask"
     }
-    pref_q = q_map.get(user['preferred_quality'], "🎬 1080p / 4K")
+    pref_q = q_map.get(user['preferred_quality'], "📺 720p HD")
+    user_fname = message.from_user.full_name or user.get('full_name') or message.from_user.first_name or "Foydalanuvchi"
 
     text = get_text("profile_text", lang,
                     user_id=user['user_id'],
-                    full_name=user['full_name'] or "User",
+                    full_name=user_fname,
                     status_str=status_str,
                     coins=user.get('coins', 0),
                     daily_downloads=user['daily_downloads'],
@@ -228,11 +247,20 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
     if current_state in ["in_shop", "in_invite_center"]:
         await state.set_state("in_profile")
         user = await get_or_create_user(user_id, message.from_user.username, message.from_user.full_name)
-        status_str = f"⭐ Premium ({user['premium_until'][:10]})" if (user['is_premium'] and user['premium_until']) else ("⭐ Premium" if user['is_premium'] else ("🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")))
-        daily_limit = ("Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")) if user['is_premium'] else "15"
+        is_admin = user_id in get_admin_ids()
+        if is_admin:
+            status_str = "⭐ Premium (Cheksiz)" if lang == 'uz' else ("⭐ Premium (Безлимит)" if lang == 'ru' else "⭐ Premium (Unlimited)")
+            daily_limit = "Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")
+        elif user['is_premium']:
+            status_str = f"⭐ Premium ({user['premium_until'][:10]})" if user['premium_until'] and user['premium_until'] != "9999-12-31T23:59:59" else "⭐ Premium"
+            daily_limit = "Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")
+        else:
+            status_str = "🆓 Bepul (Free)" if lang == 'uz' else ("🆓 Бесплатный" if lang == 'ru' else "🆓 Free")
+            daily_limit = "15"
         q_map = {'best': "🎬 1080p / 4K", '720p': "📺 720p HD", '480p': "📱 480p SD", 'mp3': "🎵 MP3 Audio", 'ask': "❓ Ask"}
-        pref_q = q_map.get(user['preferred_quality'], "🎬 1080p / 4K")
-        text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user['full_name'] or "User", status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q)
+        pref_q = q_map.get(user['preferred_quality'], "📺 720p HD")
+        user_fname = message.from_user.full_name or user.get('full_name') or message.from_user.first_name or "Foydalanuvchi"
+        text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user_fname, status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q)
         await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
     else:
         await state.clear()
@@ -452,7 +480,11 @@ async def handle_media_download(message: types.Message, bot: Bot):
         return
 
     user = await get_or_create_user(message.from_user.id)
+    is_admin = message.from_user.id in get_admin_ids()
+    is_premium = user['is_premium'] or is_admin
     pref_quality = user['preferred_quality']
+    if pref_quality == 'best' and not is_premium:
+        pref_quality = '720p'
 
     if pref_quality == 'ask':
         import hashlib
@@ -461,7 +493,7 @@ async def handle_media_download(message: types.Message, bot: Bot):
         
         await message.answer(
             f"{icon} *{platform} havolasi qabul qilindi!*\nSifat yoki formatni tanlang:",
-            reply_markup=get_quality_selector_keyboard(url),
+            reply_markup=get_quality_selector_keyboard(url, is_premium=is_premium, lang=lang),
             parse_mode="Markdown"
         )
         return
@@ -473,6 +505,13 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
     parts = callback.data.split(":")
     url_hash = parts[1]
     quality = parts[2]
+
+    user = await get_or_create_user(callback.from_user.id)
+    is_admin = callback.from_user.id in get_admin_ids()
+    is_premium = user['is_premium'] or is_admin
+    if quality == 'best' and not is_premium:
+        await callback.answer("⭐ 1080p va 4K sifat faqat Premium foydalanuvchilar uchun! 🛍 Do'kondan Premium oling.", show_alert=True)
+        return
 
     url = url_cache.get(url_hash)
     if not url:
