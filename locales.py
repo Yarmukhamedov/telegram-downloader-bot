@@ -27,6 +27,36 @@ MESSAGES = {
         "ru": "🛠 Админ панель",
         "en": "🛠 Admin Panel"
     },
+    "btn_admin_stats": {
+        "uz": "📊 Statistika",
+        "ru": "📊 Статистика",
+        "en": "📊 Statistics"
+    },
+    "btn_admin_broadcast": {
+        "uz": "📢 Xabar yuborish",
+        "ru": "📢 Рассылка",
+        "en": "📢 Broadcast"
+    },
+    "btn_admin_give_prem": {
+        "uz": "🎁 Premium hadya etish",
+        "ru": "🎁 Подарить Premium",
+        "en": "🎁 Grant Premium"
+    },
+    "btn_admin_give_coin": {
+        "uz": "🪙 Coin Ulashishi",
+        "ru": "🪙 Пополнить монеты",
+        "en": "🪙 Grant Coins"
+    },
+    "btn_admin_promos": {
+        "uz": "🎟 Promokodlar",
+        "ru": "🎟 Промокоды",
+        "en": "🎟 Promo Codes"
+    },
+    "btn_admin_channel": {
+        "uz": "📢 Majburiy obuna kanali",
+        "ru": "📢 Канал подписки",
+        "en": "📢 Force Sub Channel"
+    },
     "btn_invite_center": {
         "uz": "👥 Takliflar markazi",
         "ru": "👥 Приглашения",
@@ -525,7 +555,13 @@ LEGACY_BUTTONS = {
     "btn_language": ["🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language", "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык"],
     "btn_redeem_code": ["🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"],
     "btn_invite_link": ["🔗 Invite Link", "🔗 Taklif havolasi", "🔗 Ссылка приглашения"],
-    "btn_invite_stats": ["📊 Invite Stats", "📊 Statistika", "📊 Статистика", "📊 Takliflar statistikasi", "📊 Статистика приглашений"]
+    "btn_invite_stats": ["📊 Invite Stats", "📊 Statistika", "📊 Статистика", "📊 Takliflar statistikasi", "📊 Статистика приглашений"],
+    "btn_admin_stats": ["📊 Statistika", "📊 Статистика", "📊 Statistics"],
+    "btn_admin_broadcast": ["📢 Xabar yuborish", "📢 Рассылка", "📢 Broadcast"],
+    "btn_admin_give_prem": ["🎁 Premium hadya etish", "🎁 Подарить Premium", "🎁 Grant Premium"],
+    "btn_admin_give_coin": ["🪙 Coin Ulashishi", "🪙 Пополнить монеты", "🪙 Grant Coins"],
+    "btn_admin_promos": ["🎟 Promokodlar", "🎟 Промокоды", "🎟 Promo Codes"],
+    "btn_admin_channel": ["📢 Majburiy obuna kanali", "📢 Канал подписки", "📢 Force Sub Channel"]
 }
 
 def get_all_button_texts(key: str) -> list[str]:
@@ -543,5 +579,4 @@ def get_all_registered_buttons() -> list[str]:
             res.update(val.values())
     for legacy_list in LEGACY_BUTTONS.values():
         res.update(legacy_list)
-    res.update(["📊 Statistika", "📢 Xabar yuborish", "🎁 Premium hadya etish", "🪙 Coin Ulashishi", "🎟 Promokodlar", "📢 Majburiy obuna kanali"])
     return list(res)

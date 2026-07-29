@@ -8,6 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting, create_redeem_code, get_user_language
 from keyboards import get_admin_keyboard, get_admin_reply_keyboard
+from locales import get_all_button_texts
 
 logger = logging.getLogger(__name__)
 admin_router = Router()
@@ -54,7 +55,7 @@ async def cmd_admin_panel(message: types.Message):
         logger.error(f"Error in cmd_admin_panel: {e}")
         await message.answer(f"❌ Admin panelni ochishda xatolik yuz berdi: {e}")
 
-@admin_router.message(F.text == "📊 Statistika")
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin_stats")))
 async def cmd_admin_stats(message: types.Message):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
@@ -73,7 +74,7 @@ async def cmd_admin_stats(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown")
 
-@admin_router.message(F.text == "📢 Xabar yuborish")
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin_broadcast")))
 async def cmd_admin_broadcast(message: types.Message, state: FSMContext):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
@@ -84,7 +85,7 @@ async def cmd_admin_broadcast(message: types.Message, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_broadcast)
 async def handle_broadcast_message(message: types.Message, state: FSMContext, bot: Bot):
-    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+    if message.text in (get_all_button_texts("btn_back") + get_all_button_texts("btn_main_menu")):
         await state.clear()
         from app import cmd_home_main
         await cmd_home_main(message, state)
@@ -112,7 +113,7 @@ async def handle_broadcast_message(message: types.Message, state: FSMContext, bo
         parse_mode="Markdown"
     )
 
-@admin_router.message(F.text == "📢 Majburiy obuna kanali")
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin_channel")))
 async def cmd_admin_channel(message: types.Message, state: FSMContext):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
@@ -134,7 +135,7 @@ async def cmd_admin_channel(message: types.Message, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_channel)
 async def handle_channel_input(message: types.Message, state: FSMContext):
-    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+    if message.text in (get_all_button_texts("btn_back") + get_all_button_texts("btn_main_menu")):
         await state.clear()
         from app import cmd_home_main
         await cmd_home_main(message, state)
@@ -158,20 +159,20 @@ async def handle_channel_input(message: types.Message, state: FSMContext):
     else:
         await message.answer("❌ Noto'g'ri format! Misol: `@kanal_username https://t.me/kanal_link`")
 
-@admin_router.message(F.text == "🎟 Promokodlar")
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin_promos")))
 async def cmd_admin_promos(message: types.Message):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
         return
     await message.answer("🎟 Yangi promokod yaratish uchun buyruqdan foydalaning:\n\n`/create_code VIP2026 days 7 50`\n`/create_code TIKTOK2026 coins 100 200`", parse_mode="Markdown")
 
-@admin_router.message(F.text.in_(["🎁 Premium hadya etish", "🪙 Coin Ulashishi"]))
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin_give_prem") + get_all_button_texts("btn_admin_give_coin")))
 async def cmd_admin_give_start(message: types.Message, state: FSMContext):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
         return
 
-    give_type = "premium" if message.text == "🎁 Premium hadya etish" else "coin"
+    give_type = "premium" if message.text in get_all_button_texts("btn_admin_give_prem") else "coin"
     await state.set_state(AdminStates.waiting_for_give_id)
     await state.update_data(give_type=give_type)
     
@@ -180,7 +181,7 @@ async def cmd_admin_give_start(message: types.Message, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_give_id)
 async def handle_give_id(message: types.Message, state: FSMContext):
-    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+    if message.text in (get_all_button_texts("btn_back") + get_all_button_texts("btn_main_menu")):
         await state.clear()
         from app import cmd_home_main
         await cmd_home_main(message, state)
@@ -226,7 +227,7 @@ async def cb_admin_confirm_id(callback: types.CallbackQuery, state: FSMContext):
 
 @admin_router.message(AdminStates.waiting_for_give_amount)
 async def handle_give_amount(message: types.Message, state: FSMContext):
-    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+    if message.text in (get_all_button_texts("btn_back") + get_all_button_texts("btn_main_menu")):
         await state.clear()
         from app import cmd_home_main
         await cmd_home_main(message, state)
