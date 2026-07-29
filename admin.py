@@ -201,7 +201,7 @@ async def handle_premium_input(message: types.Message, state: FSMContext):
         await message.answer("❌ Noto'g'ri format! Misol: `123456789 30`", parse_mode="Markdown")
 
 @admin_router.message(Command("grant_premium"))
-async def cmd_grant_premium(message: types.Message):
+async def cmd_grant_premium(message: types.Message, bot: Bot):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
         return
@@ -213,13 +213,21 @@ async def cmd_grant_premium(message: types.Message):
         res = await grant_premium(uid, days)
         if res:
             await message.answer(f"✅ Foydalanuvchi `{uid}` ga {days} kunlik Premium berildi!")
+            try:
+                lang = await get_user_language(uid)
+                msg = f"🎉 *Tabriklaymiz!*\nSizga administrator tomonidan *{days} kunlik Premium* obunasi taqdim etildi! 🥳" if lang == 'uz' else (
+                    f"🎉 *Поздравляем!*\nАдминистратор выдал вам *{days} дней Premium* подписки! 🥳" if lang == 'ru' else
+                    f"🎉 *Congratulations!*\nAn administrator has granted you *{days} days of Premium*! 🥳")
+                await bot.send_message(chat_id=uid, text=msg, parse_mode="Markdown")
+            except Exception:
+                pass
         else:
             await message.answer(f"❌ Foydalanuvchi `{uid}` bazadan topilmadi.")
     else:
         await message.answer("ℹ️ Foydalanish: `/grant_premium <user_id> <days>`")
 
 @admin_router.message(Command("grant_coins"))
-async def cmd_grant_coins(message: types.Message):
+async def cmd_grant_coins(message: types.Message, bot: Bot):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
         return
@@ -232,6 +240,14 @@ async def cmd_grant_coins(message: types.Message):
         try:
             new_balance = await add_user_coins(uid, amount)
             await message.answer(f"✅ Foydalanuvchi `{uid}` hisobiga {amount} Coin qo'shildi!\n🪙 *Yangi balans:* {new_balance}", parse_mode="Markdown")
+            try:
+                lang = await get_user_language(uid)
+                msg = f"🎉 *Tabriklaymiz!*\nAdministrator tomonidan sizning hisobingizga *{amount} Coin* qo'shildi! 🥳" if lang == 'uz' else (
+                    f"🎉 *Поздравляем!*\nАдминистратор добавил вам *{amount} монет*! 🥳" if lang == 'ru' else
+                    f"🎉 *Congratulations!*\nAn administrator has added *{amount} Coins* to your balance! 🥳")
+                await bot.send_message(chat_id=uid, text=msg, parse_mode="Markdown")
+            except Exception:
+                pass
         except Exception as e:
             await message.answer(f"❌ Xatolik yuz berdi: ehtimol foydalanuvchi topilmadi.")
     else:
