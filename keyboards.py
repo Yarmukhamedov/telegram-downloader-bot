@@ -122,11 +122,24 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📢 Xabar yuborish", callback_data="admin_broadcast")
         ],
         [
+            InlineKeyboardButton(text="🎁 Premium hadya etish", callback_data="admin_give_prem"),
+            InlineKeyboardButton(text="🪙 Coin Ulashishi", callback_data="admin_give_coin")
+        ],
+        [
             InlineKeyboardButton(text="🎟 Promokodlar", callback_data="admin_promos"),
             InlineKeyboardButton(text="👥 Foydalanuvchi b-n ishlash", callback_data="admin_user_manage")
         ],
         [
             InlineKeyboardButton(text="📢 Majburiy obuna kanali", callback_data="admin_channel")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_admin_confirm_keyboard(confirm_data: str) -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=confirm_data),
+            InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_give_cancel")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

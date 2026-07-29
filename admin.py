@@ -24,7 +24,8 @@ def get_admin_ids() -> list[int]:
 class AdminStates(StatesGroup):
     waiting_for_broadcast = State()
     waiting_for_channel = State()
-    waiting_for_premium_input = State()
+    waiting_for_give_id = State()
+    waiting_for_give_amount = State()
 
 @admin_router.message(Command("admin"))
 @admin_router.message(F.text.in_(["🛠 Admin Panel", "🛠 Админ панель"]))
@@ -164,82 +165,127 @@ async def handle_channel_input(message: types.Message, state: FSMContext):
     else:
         await message.answer("❌ Noto'g'ri format! Misol: `@kanal_username https://t.me/kanal_link`")
 
-@admin_router.callback_query(F.data == "admin_premium")
-async def cb_admin_premium(callback: types.CallbackQuery, state: FSMContext):
+@admin_router.callback_query(F.data.in_(["admin_give_prem", "admin_give_coin"]))
+async def cb_admin_give_start(callback: types.CallbackQuery, state: FSMContext):
     admin_ids = get_admin_ids()
     if callback.from_user.id not in admin_ids:
         await callback.answer("Ruxsat berilmagan!", show_alert=True)
         return
 
-    await state.set_state(AdminStates.waiting_for_premium_input)
-    await callback.message.answer(
-        "👑 *Premium Berish*\n\n"
-        "Foydalanuvchi ID si va kunlar sonini quyidagi formatda kiriting:\n"
-        "`123456789 30` (ID va Kun)",
-        parse_mode="Markdown"
-    )
+    give_type = "premium" if callback.data == "admin_give_prem" else "coin"
+    await state.set_state(AdminStates.waiting_for_give_id)
+    await state.update_data(give_type=give_type)
+    
+    text = "👤 *Foydalanuvchi ID raqamini kiriting:*"
+    await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
 
-@admin_router.message(AdminStates.waiting_for_premium_input)
-async def handle_premium_input(message: types.Message, state: FSMContext):
+@admin_router.message(AdminStates.waiting_for_give_id)
+async def handle_give_id(message: types.Message, state: FSMContext):
     if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
         await state.clear()
         from app import cmd_home_main
         await cmd_home_main(message, state)
         return
-    await state.clear()
-    parts = message.text.strip().split()
-    if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
-        uid = int(parts[0])
-        days = int(parts[1])
-        res = await grant_premium(uid, days)
-        if res:
-            await message.answer(f"✅ Foydalanuvchi `{uid}` ga {days} kunlik Premium berildi!", parse_mode="Markdown")
-        else:
-            await message.answer(f"❌ Foydalanuvchi `{uid}` ma'lumotlar bazasidan topilmadi.", parse_mode="Markdown")
-    else:
-        await message.answer("❌ Noto'g'ri format! Misol: `123456789 30`", parse_mode="Markdown")
-
-@admin_router.message(Command("grant_premium"))
-async def cmd_grant_premium(message: types.Message, bot: Bot):
-    admin_ids = get_admin_ids()
-    if message.from_user.id not in admin_ids:
+        
+    uid_text = message.text.strip()
+    if not uid_text.isdigit():
+        await message.answer("❌ Noto'g'ri format! Faqat raqamlardan iborat ID kiriting:")
         return
+        
+    uid = int(uid_text)
+    await state.update_data(give_uid=uid)
+    from keyboards import get_admin_confirm_keyboard
+    
+    await message.answer(
+        f"Kiritilgan ID: `{uid}`\nTasdiqlaysizmi?",
+        reply_markup=get_admin_confirm_keyboard("admin_confirm_id"),
+        parse_mode="Markdown"
+    )
 
-    parts = message.text.strip().split()
-    if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
-        uid = int(parts[1])
-        days = int(parts[2])
-        res = await grant_premium(uid, days)
+@admin_router.callback_query(F.data == "admin_give_cancel")
+async def cb_admin_give_cancel(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.delete()
+    await callback.message.answer("❌ Amaliyot bekor qilindi.")
+    await callback.answer()
+
+@admin_router.callback_query(F.data == "admin_confirm_id")
+async def cb_admin_confirm_id(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    give_type = data.get("give_type")
+    
+    await callback.message.delete()
+    await state.set_state(AdminStates.waiting_for_give_amount)
+    
+    if give_type == "premium":
+        text = "Muddatni (*kunlar soni*) kiriting:"
+    else:
+        text = "Miqdorni (*Coin*) kiriting:"
+        
+    await callback.message.answer(text, parse_mode="Markdown")
+    await callback.answer()
+
+@admin_router.message(AdminStates.waiting_for_give_amount)
+async def handle_give_amount(message: types.Message, state: FSMContext):
+    if message.text in ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back", "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]:
+        await state.clear()
+        from app import cmd_home_main
+        await cmd_home_main(message, state)
+        return
+        
+    amount_text = message.text.strip()
+    if not amount_text.isdigit():
+        await message.answer("❌ Noto'g'ri format! Faqat raqam kiriting:")
+        return
+        
+    amount = int(amount_text)
+    await state.update_data(give_amount=amount)
+    from keyboards import get_admin_confirm_keyboard
+    
+    data = await state.get_data()
+    give_type = data.get("give_type")
+    
+    unit = "kun" if give_type == "premium" else "Coin"
+    await message.answer(
+        f"Kiritilgan miqdor: `{amount}` {unit}\nTasdiqlaysizmi?",
+        reply_markup=get_admin_confirm_keyboard("admin_confirm_amount"),
+        parse_mode="Markdown"
+    )
+
+@admin_router.callback_query(F.data == "admin_confirm_amount")
+async def cb_admin_confirm_amount(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    uid = data.get("give_uid")
+    amount = data.get("give_amount")
+    give_type = data.get("give_type")
+    
+    await state.clear()
+    await callback.message.delete()
+    
+    if not uid or not amount:
+        await callback.message.answer("❌ Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.")
+        return
+        
+    if give_type == "premium":
+        res = await grant_premium(uid, amount)
         if res:
-            await message.answer(f"✅ Foydalanuvchi `{uid}` ga {days} kunlik Premium berildi!")
+            await callback.message.answer(f"✅ Foydalanuvchi `{uid}` ga {amount} kunlik Premium taqdim etildi!", parse_mode="Markdown")
             try:
                 lang = await get_user_language(uid)
-                msg = f"🎉 *Tabriklaymiz!*\nSizga administrator tomonidan *{days} kunlik Premium* obunasi taqdim etildi! 🥳" if lang == 'uz' else (
-                    f"🎉 *Поздравляем!*\nАдминистратор выдал вам *{days} дней Premium* подписки! 🥳" if lang == 'ru' else
-                    f"🎉 *Congratulations!*\nAn administrator has granted you *{days} days of Premium*! 🥳")
+                msg = f"🎉 *Tabriklaymiz!*\nSizga administrator tomonidan *{amount} kunlik Premium* obunasi taqdim etildi! 🥳" if lang == 'uz' else (
+                    f"🎉 *Поздравляем!*\nАдминистратор выдал вам *{amount} дней Premium* подписки! 🥳" if lang == 'ru' else
+                    f"🎉 *Congratulations!*\nAn administrator has granted you *{amount} days of Premium*! 🥳")
                 await bot.send_message(chat_id=uid, text=msg, parse_mode="Markdown")
             except Exception:
                 pass
         else:
-            await message.answer(f"❌ Foydalanuvchi `{uid}` bazadan topilmadi.")
+            await callback.message.answer(f"❌ Foydalanuvchi `{uid}` ma'lumotlar bazasidan topilmadi.", parse_mode="Markdown")
     else:
-        await message.answer("ℹ️ Foydalanish: `/grant_premium <user_id> <days>`")
-
-@admin_router.message(Command("grant_coins"))
-async def cmd_grant_coins(message: types.Message, bot: Bot):
-    admin_ids = get_admin_ids()
-    if message.from_user.id not in admin_ids:
-        return
-
-    parts = message.text.strip().split()
-    if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
-        uid = int(parts[1])
-        amount = int(parts[2])
         from database import add_user_coins
         try:
             new_balance = await add_user_coins(uid, amount)
-            await message.answer(f"✅ Foydalanuvchi `{uid}` hisobiga {amount} Coin qo'shildi!\n🪙 *Yangi balans:* {new_balance}", parse_mode="Markdown")
+            await callback.message.answer(f"✅ Foydalanuvchi `{uid}` hisobiga {amount} Coin qo'shildi!\n🪙 *Yangi balans:* {new_balance}", parse_mode="Markdown")
             try:
                 lang = await get_user_language(uid)
                 msg = f"🎉 *Tabriklaymiz!*\nAdministrator tomonidan sizning hisobingizga *{amount} Coin* qo'shildi! 🥳" if lang == 'uz' else (
@@ -249,9 +295,9 @@ async def cmd_grant_coins(message: types.Message, bot: Bot):
             except Exception:
                 pass
         except Exception as e:
-            await message.answer(f"❌ Xatolik yuz berdi: ehtimol foydalanuvchi topilmadi.")
-    else:
-        await message.answer("ℹ️ Foydalanish: `/grant_coins <user_id> <amount>`")
+            await callback.message.answer(f"❌ Xatolik yuz berdi: ehtimol foydalanuvchi topilmadi.")
+            
+    await callback.answer()
 
 @admin_router.message(Command("create_code"))
 async def cmd_create_code(message: types.Message):
