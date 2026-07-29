@@ -523,7 +523,9 @@ LEGACY_BUTTONS = {
     "btn_back": ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back"],
     "btn_main_menu": ["🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"],
     "btn_language": ["🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language", "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык"],
-    "btn_redeem_code": ["🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"]
+    "btn_redeem_code": ["🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"],
+    "btn_invite_link": ["🔗 Invite Link", "🔗 Taklif havolasi", "🔗 Ссылка приглашения"],
+    "btn_invite_stats": ["📊 Invite Stats", "📊 Statistika", "📊 Статистика", "📊 Takliflar statistikasi", "📊 Статистика приглашений"]
 }
 
 def get_all_button_texts(key: str) -> list[str]:

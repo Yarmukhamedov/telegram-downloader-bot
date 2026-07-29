@@ -308,7 +308,7 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: F
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
-@dp.message(F.text.in_(["🔗 Invite Link", "🔗 Taklif havolasi", "🔗 Ссылка приглашения"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_invite_link")))
 @dp.callback_query(F.data == "show_invite_link")
 async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: Bot):
     msg = event.message if isinstance(event, types.CallbackQuery) else event
@@ -322,7 +322,7 @@ async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: 
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
-@dp.message(F.text.in_(["📊 Invite Stats", "📊 Statistika", "📊 Статистика"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_invite_stats")))
 @dp.callback_query(F.data == "show_invite_stats")
 async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot: Bot):
     msg = event.message if isinstance(event, types.CallbackQuery) else event
