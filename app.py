@@ -453,6 +453,9 @@ from aiogram.filters import StateFilter
 @dp.message(StateFilter(None), F.text)
 async def handle_media_download(message: types.Message, bot: Bot):
     logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
+    if message.text.startswith("/"):
+        return
+
     if message.text in [
         "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality",
         "👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan",
@@ -466,7 +469,9 @@ async def handle_media_download(message: types.Message, bot: Bot):
         "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
         "🔙 Orqaga", "🔙 Назад", "🔙 Back", "⬅️ Orqaga", "⬅️ Назад", "⬅️ Back",
         "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu",
-        "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"
+        "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code",
+        "📊 Statistika", "📢 Xabar yuborish", "🎁 Premium hadya etish", "🪙 Coin Ulashishi",
+        "🎟 Promokodlar", "📢 Majburiy obuna kanali"
     ]:
         return
 
