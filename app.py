@@ -448,7 +448,9 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
     else:
         await callback.answer("❌ Siz hali kanalga obuna bo'lmadingiz!", show_alert=True)
 
-@dp.message(F.text)
+from aiogram.filters import StateFilter
+
+@dp.message(StateFilter(None), F.text)
 async def handle_media_download(message: types.Message, bot: Bot):
     logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
     if message.text in [

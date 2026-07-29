@@ -37,10 +37,9 @@ async def cmd_admin_panel(message: types.Message):
 
     try:
         lang = await get_user_language(message.from_user.id)
-        await message.answer("👨‍💻 *Admin bo'limi:*", reply_markup=get_admin_reply_keyboard(lang), parse_mode="Markdown")
         stats = await get_admin_stats()
         text = (
-            "🛠 *Admin Boshqaruv Paneli*\n\n"
+            "👨‍💻 *Admin Boshqaruv Paneli*\n\n"
             f"👥 *Jami foydalanuvchilar:* {stats['total_users']} ta\n"
             f"⭐ *Premium foydalanuvchilar:* {stats['premium_users']} ta\n"
             f"⚡️ *Bugun faol:* {stats['active_today']} ta\n\n"
@@ -50,16 +49,15 @@ async def cmd_admin_panel(message: types.Message):
             f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta\n\n"
             "👇 *Quyidagi tugmalar orqali botni boshqarishingiz mumkin:*"
         )
-        await message.answer(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+        await message.answer(text, reply_markup=get_admin_reply_keyboard(lang), parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Error in cmd_admin_panel: {e}")
         await message.answer(f"❌ Admin panelni ochishda xatolik yuz berdi: {e}")
 
-@admin_router.callback_query(F.data == "admin_stats")
-async def cb_admin_stats(callback: types.CallbackQuery):
+@admin_router.message(F.text == "📊 Statistika")
+async def cmd_admin_stats(message: types.Message):
     admin_ids = get_admin_ids()
-    if callback.from_user.id not in admin_ids:
-        await callback.answer("Ruxsat berilmagan!", show_alert=True)
+    if message.from_user.id not in admin_ids:
         return
 
     stats = await get_admin_stats()
@@ -73,19 +71,16 @@ async def cb_admin_stats(callback: types.CallbackQuery):
         f"🪙 *Jami Coinlar (bazada):* {stats.get('total_coins', 0)} 🪙\n"
         f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta\n"
     )
-    await callback.message.edit_text(text, reply_markup=get_admin_keyboard(), parse_mode="Markdown")
-    await callback.answer()
+    await message.answer(text, parse_mode="Markdown")
 
-@admin_router.callback_query(F.data == "admin_broadcast")
-async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
+@admin_router.message(F.text == "📢 Xabar yuborish")
+async def cmd_admin_broadcast(message: types.Message, state: FSMContext):
     admin_ids = get_admin_ids()
-    if callback.from_user.id not in admin_ids:
-        await callback.answer("Ruxsat berilmagan!", show_alert=True)
+    if message.from_user.id not in admin_ids:
         return
 
     await state.set_state(AdminStates.waiting_for_broadcast)
-    await callback.message.answer("📢 Barcha foydalanuvchilarga yubormoqchi bo'lgan xabaringizni (matn, rasm yoki video) yuboring:")
-    await callback.answer()
+    await message.answer("📢 Barcha foydalanuvchilarga yubormoqchi bo'lgan xabaringizni (matn, rasm yoki video) yuboring:")
 
 @admin_router.message(AdminStates.waiting_for_broadcast)
 async def handle_broadcast_message(message: types.Message, state: FSMContext, bot: Bot):
@@ -117,18 +112,17 @@ async def handle_broadcast_message(message: types.Message, state: FSMContext, bo
         parse_mode="Markdown"
     )
 
-@admin_router.callback_query(F.data == "admin_channel")
-async def cb_admin_channel(callback: types.CallbackQuery, state: FSMContext):
+@admin_router.message(F.text == "📢 Majburiy obuna kanali")
+async def cmd_admin_channel(message: types.Message, state: FSMContext):
     admin_ids = get_admin_ids()
-    if callback.from_user.id not in admin_ids:
-        await callback.answer("Ruxsat berilmagan!", show_alert=True)
+    if message.from_user.id not in admin_ids:
         return
 
     current_ch = await get_setting("force_channel_id", "Sozlanmagan")
     current_link = await get_setting("force_channel_link", "Sozlanmagan")
 
     await state.set_state(AdminStates.waiting_for_channel)
-    await callback.message.answer(
+    await message.answer(
         f"⚙️ *Majburiy obuna kanali*\n\n"
         f"📌 Joriy Kanal ID/Username: `{current_ch}`\n"
         f"🔗 Joriy Link: `{current_link}`\n\n"
@@ -137,7 +131,6 @@ async def cb_admin_channel(callback: types.CallbackQuery, state: FSMContext):
         f"O'chirib tashlash uchun `off` deb yozing.",
         parse_mode="Markdown"
     )
-    await callback.answer()
 
 @admin_router.message(AdminStates.waiting_for_channel)
 async def handle_channel_input(message: types.Message, state: FSMContext):
@@ -165,20 +158,25 @@ async def handle_channel_input(message: types.Message, state: FSMContext):
     else:
         await message.answer("❌ Noto'g'ri format! Misol: `@kanal_username https://t.me/kanal_link`")
 
-@admin_router.callback_query(F.data.in_(["admin_give_prem", "admin_give_coin"]))
-async def cb_admin_give_start(callback: types.CallbackQuery, state: FSMContext):
+@admin_router.message(F.text == "🎟 Promokodlar")
+async def cmd_admin_promos(message: types.Message):
     admin_ids = get_admin_ids()
-    if callback.from_user.id not in admin_ids:
-        await callback.answer("Ruxsat berilmagan!", show_alert=True)
+    if message.from_user.id not in admin_ids:
+        return
+    await message.answer("🎟 Yangi promokod yaratish uchun buyruqdan foydalaning:\n\n`/create_code VIP2026 days 7 50`\n`/create_code TIKTOK2026 coins 100 200`", parse_mode="Markdown")
+
+@admin_router.message(F.text.in_(["🎁 Premium hadya etish", "🪙 Coin Ulashishi"]))
+async def cmd_admin_give_start(message: types.Message, state: FSMContext):
+    admin_ids = get_admin_ids()
+    if message.from_user.id not in admin_ids:
         return
 
-    give_type = "premium" if callback.data == "admin_give_prem" else "coin"
+    give_type = "premium" if message.text == "🎁 Premium hadya etish" else "coin"
     await state.set_state(AdminStates.waiting_for_give_id)
     await state.update_data(give_type=give_type)
     
     text = "👤 *Foydalanuvchi ID raqamini kiriting:*"
-    await callback.message.answer(text, parse_mode="Markdown")
-    await callback.answer()
+    await message.answer(text, parse_mode="Markdown")
 
 @admin_router.message(AdminStates.waiting_for_give_id)
 async def handle_give_id(message: types.Message, state: FSMContext):

@@ -19,6 +19,18 @@ def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboard
 
 def get_admin_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
+        [
+            KeyboardButton(text="📊 Statistika"),
+            KeyboardButton(text="📢 Xabar yuborish")
+        ],
+        [
+            KeyboardButton(text="🎁 Premium hadya etish"),
+            KeyboardButton(text="🪙 Coin Ulashishi")
+        ],
+        [
+            KeyboardButton(text="🎟 Promokodlar"),
+            KeyboardButton(text="📢 Majburiy obuna kanali")
+        ],
         [KeyboardButton(text=get_text("btn_main_menu", lang))]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
