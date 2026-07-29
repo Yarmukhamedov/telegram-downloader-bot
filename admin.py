@@ -218,6 +218,25 @@ async def cmd_grant_premium(message: types.Message):
     else:
         await message.answer("ℹ️ Foydalanish: `/grant_premium <user_id> <days>`")
 
+@admin_router.message(Command("grant_coins"))
+async def cmd_grant_coins(message: types.Message):
+    admin_ids = get_admin_ids()
+    if message.from_user.id not in admin_ids:
+        return
+
+    parts = message.text.strip().split()
+    if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
+        uid = int(parts[1])
+        amount = int(parts[2])
+        from database import add_user_coins
+        try:
+            new_balance = await add_user_coins(uid, amount)
+            await message.answer(f"✅ Foydalanuvchi `{uid}` hisobiga {amount} Coin qo'shildi!\n🪙 *Yangi balans:* {new_balance}", parse_mode="Markdown")
+        except Exception as e:
+            await message.answer(f"❌ Xatolik yuz berdi: ehtimol foydalanuvchi topilmadi.")
+    else:
+        await message.answer("ℹ️ Foydalanish: `/grant_coins <user_id> <amount>`")
+
 @admin_router.message(Command("create_code"))
 async def cmd_create_code(message: types.Message):
     admin_ids = get_admin_ids()
