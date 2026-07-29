@@ -504,3 +504,36 @@ def get_text(key: str, lang: str = "uz", **kwargs) -> str:
         except Exception:
             return text
     return text
+
+LEGACY_BUTTONS = {
+    "btn_profile": ["👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan", "👤 Profil", "👤 Профиль", "👤 Profile"],
+    "btn_quality": ["🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality", "🎬 Sifat", "🎬 Качество"],
+    "btn_settings": ["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"],
+    "btn_help": ["ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help"],
+    "btn_admin": ["🛠 Admin Panel", "🛠 Админ панель", "🛠 Admin panel"],
+    "btn_invite_center": ["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center", "👥 Takliflar Markazi", "👥 Центр Приглашений"],
+    "btn_shop_redeem": ["🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem", "🛍 Do'kon", "🛍 Магазин", "🛍 Shop"],
+    "btn_balance": ["🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)", "🪙 Balans", "🪙 Баланс", "🪙 Balance"],
+    "btn_back": ["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back"],
+    "btn_main_menu": ["🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"],
+    "btn_language": ["🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language", "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык"],
+    "btn_redeem_code": ["🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"]
+}
+
+def get_all_button_texts(key: str) -> list[str]:
+    res = set()
+    if key in MESSAGES and isinstance(MESSAGES[key], dict):
+        res.update(MESSAGES[key].values())
+    if key in LEGACY_BUTTONS:
+        res.update(LEGACY_BUTTONS[key])
+    return list(res)
+
+def get_all_registered_buttons() -> list[str]:
+    res = set()
+    for key, val in MESSAGES.items():
+        if key.startswith("btn_") and isinstance(val, dict):
+            res.update(val.values())
+    for legacy_list in LEGACY_BUTTONS.values():
+        res.update(legacy_list)
+    res.update(["📊 Statistika", "📢 Xabar yuborish", "🎁 Premium hadya etish", "🪙 Coin Ulashishi", "🎟 Promokodlar", "📢 Majburiy obuna kanali"])
+    return list(res)

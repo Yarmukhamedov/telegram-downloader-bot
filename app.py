@@ -37,7 +37,7 @@ from keyboards import (
     get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
     get_invite_center_reply_keyboard, get_settings_reply_keyboard
 )
-from locales import get_text
+from locales import get_text, get_all_button_texts, get_all_registered_buttons
 from admin import admin_router, get_admin_ids
 
 logging.basicConfig(
@@ -115,7 +115,7 @@ async def delete_menu_and_user_msg(callback: types.CallbackQuery, user_msg_id: i
             pass
 
 @dp.message(Command("lang"))
-@dp.message(F.text.in_(["🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language", "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_language")))
 @dp.callback_query(F.data == "change_lang_menu")
 async def cmd_change_lang(event: types.Message | types.CallbackQuery):
     msg = event.message if isinstance(event, types.CallbackQuery) else event
@@ -140,14 +140,14 @@ async def cb_set_lang(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.message(Command("settings"))
-@dp.message(F.text.in_(["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_settings")))
 async def cmd_settings_menu(message: types.Message):
     lang = await get_user_language(message.from_user.id)
     text = get_text("settings_title", lang)
     await message.answer(text, reply_markup=get_settings_reply_keyboard(lang), parse_mode="Markdown")
 
 @dp.message(Command("quality"))
-@dp.message(F.text.in_(["🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_quality")))
 async def cmd_quality_settings(message: types.Message):
     logger.info(f">>> Sifat/Quality clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id)
@@ -205,7 +205,7 @@ async def cb_close_quality(callback: types.CallbackQuery):
     await delete_menu_and_user_msg(callback, user_msg_id)
     await callback.answer()
 
-@dp.message(F.text.in_(["👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_profile")))
 async def cmd_profile(message: types.Message, state: FSMContext):
     await state.set_state("in_profile")
     logger.info(f">>> Profil clicked by user_id: {message.from_user.id}")
@@ -243,7 +243,7 @@ async def cmd_profile(message: types.Message, state: FSMContext):
                     pref_q=pref_q)
     await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
 
-@dp.message(F.text.in_(["🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_balance")))
 async def cmd_balance(message: types.Message):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
@@ -251,7 +251,7 @@ async def cmd_balance(message: types.Message):
     text = get_text("balance_text", lang, coins=coins)
     await message.answer(text, parse_mode="Markdown")
 
-@dp.message(F.text.in_(["⬅️ Orqaga", "⬅️ Назад", "⬅️ Back", "🔙 Orqaga", "🔙 Назад", "🔙 Back"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_back")))
 async def cmd_back_main(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
@@ -280,7 +280,7 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
         text = get_text("back_main_menu", lang)
         await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
-@dp.message(F.text.in_(["🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_main_menu")))
 async def cmd_home_main(message: types.Message, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
@@ -289,7 +289,7 @@ async def cmd_home_main(message: types.Message, state: FSMContext):
     text = get_text("back_main_menu", lang)
     await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
-@dp.message(F.text.in_(["👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_invite_center")))
 @dp.callback_query(F.data == "invite_center_menu")
 async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: FSMContext, bot: Bot):
     await state.set_state("in_invite_center")
@@ -332,7 +332,7 @@ async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot:
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
-@dp.message(F.text.in_(["🛍 Do'kon", "🛍 Магазин", "🛍 Shop", "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_shop_redeem")))
 @dp.callback_query(F.data == "shop_menu")
 async def cmd_shop(event: types.Message | types.CallbackQuery, state: FSMContext):
     await state.set_state("in_shop")
@@ -346,14 +346,14 @@ async def cmd_shop(event: types.Message | types.CallbackQuery, state: FSMContext
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
-@dp.message(F.text.in_(["👑 Buy Premium", "👑 Купить Premium"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_buy_prem_menu")))
 async def cmd_buy_premium_menu(message: types.Message):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
     text = get_text("buy_premium_text", lang)
     await message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang, message.message_id), parse_mode="Markdown")
 
-@dp.message(F.text.in_(["🪙 Use Coins", "🪙 Использовать монеты"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_use_coins")))
 async def cmd_use_coins_menu(message: types.Message):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
@@ -406,7 +406,7 @@ async def cb_buy_shop(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.message(Command("redeem"))
-@dp.message(F.text.in_(["🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_redeem_code")))
 @dp.callback_query(F.data == "redeem_code_prompt")
 async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
     msg = event.message if isinstance(event, types.CallbackQuery) else event
@@ -434,13 +434,13 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
-@dp.message(F.text.in_(["ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_help")))
 async def cmd_help(message: types.Message):
     logger.info(f">>> Help clicked by user_id: {message.from_user.id}")
     lang = await get_user_language(message.from_user.id)
     await message.answer(get_text("help_text", lang), parse_mode="Markdown")
 
-@dp.message(F.text.in_(["🛠 Admin Panel", "🛠 Админ панель"]))
+@dp.message(F.text.in_(get_all_button_texts("btn_admin")))
 async def cmd_admin_panel_direct(message: types.Message):
     from admin import cmd_admin_panel
     await cmd_admin_panel(message)
@@ -456,23 +456,7 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
 
 from aiogram.filters import StateFilter
 
-IGNORED_BUTTONS = [
-    "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality",
-    "👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan",
-    "ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help",
-    "🛠 Admin Panel", "🛠 Админ панель",
-    "👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center",
-    "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem", "🛍 Do'kon", "🛍 Магазин", "🛍 Shop",
-    "👑 Buy Premium", "👑 Купить Premium", "🪙 Use Coins", "🪙 Использовать монеты",
-    "🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language",
-    "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
-    "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
-    "🔙 Orqaga", "🔙 Назад", "🔙 Back", "⬅️ Orqaga", "⬅️ Назад", "⬅️ Back",
-    "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu",
-    "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code",
-    "📊 Statistika", "📢 Xabar yuborish", "🎁 Premium hadya etish", "🪙 Coin Ulashishi",
-    "🎟 Promokodlar", "📢 Majburiy obuna kanali"
-]
+IGNORED_BUTTONS = get_all_registered_buttons()
 
 @dp.message(StateFilter(None), F.text, ~F.text.startswith("/"), ~F.text.in_(IGNORED_BUTTONS))
 async def handle_media_download(message: types.Message, bot: Bot):
