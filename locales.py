@@ -370,44 +370,35 @@ MESSAGES = {
     # Invite Center & Anti-Cheat
     "invite_center_welcome": {
         "uz": (
-            "👥 *Takliflar Markazi*\n\n"
-            "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini *bepulga* qo'lga kiriting!\n\n"
-            "👇 *Kerakli menyuni tanlang:*"
+            "Kerakli menyuni tanlang:"
         ),
         "ru": (
-            "👥 *Центр Приглашений*\n\n"
-            "Приглашайте друзей и получайте Premium подписку абсолютно *бесплатно*!\n\n"
-            "👇 *Выберите нужный пункт:*"
+            "Выберите нужный пункт:"
         ),
         "en": (
-            "👥 *Invite Center*\n\n"
-            "Invite your friends and get Premium access completely *for free*!\n\n"
-            "👇 *Select an option below:*"
+            "Select an option below:"
         )
     },
     "invite_link_text": {
         "uz": (
-            "🔗 *Invite Link*\n\n"
-            "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini bepulga qo'lga kiriting!\n\n"
-            "🔗 *Sizning shaxsiy referal havolangiz:*\n"
+            "Do'stlaringizni taklif qiling va botimizning Premium obunasini bepulga qo'lga kiriting!\n\n"
+            "🔗 *Sizning shaxsiy taklif havolangiz:*\n"
             "`{ref_link}`\n\n"
             "*Qoidalar:*\n"
             "• Har bir faol tasdiqlangan do'stingiz uchun 100 coin olasiz\n"
             "• Do'stingiz faol hisoblanishi uchun u talab qilingan kanalga obuna bo'lishi va ushbu bot orqali kamida 1 ta video yoki musiqa yuklab olishi shart"
         ),
         "ru": (
-            "🔗 *Invite Link*\n\n"
             "Приглашайте друзей и получайте Premium подписку абсолютно бесплатно!\n\n"
-            "🔗 *Ваша персональная реферальная ссылка:*\n"
+            "*Ваша персональная пригласительная ссылка:*\n"
             "`{ref_link}`\n\n"
             "*Правила:*\n"
             "• Вы получаете 100 монет за каждого активного подтвержденного друга\n"
             "• Чтобы друг считался активным, он должен подписаться на обязательный канал и скачать минимум 1 видео или аудио через этого бота"
         ),
         "en": (
-            "🔗 *Invite Link*\n\n"
             "Invite your friends and you can get Premium access completely for free!\n\n"
-            "🔗 *Your Personal Referral Link:*\n"
+            "🔗 *Your personal invite link:*\n"
             "`{ref_link}`\n\n"
             "*Rules:*\n"
             "• You get 100 coins for each active verified friend\n"
@@ -416,29 +407,29 @@ MESSAGES = {
     },
     "invite_stats_text": {
         "uz": (
-            "📊 *Sizning Takliflar Statistikangiz:*\n\n"
+            "📊 *Sizning takliflar statistikangiz:*\n\n"
             "• *Jami taklif qilinganlar:* {total_ref}\n"
             "• *Faol do'stlar:* {active_ref}\n"
-            "• *Referaldan yig'ilgan coinlar:* {earned_coins}"
+            "• *Taklifdan yig'ilgan coinlar:* {earned_coins}"
         ),
         "ru": (
             "📊 *Ваша статистика приглашений:*\n\n"
             "• *Всего приглашено пользователей:* {total_ref}\n"
             "• *Активные друзья:* {active_ref}\n"
-            "• *Заработано реферальных монет:* {earned_coins}"
+            "• *Заработано монет за приглашения:* {earned_coins}"
         ),
         "en": (
-            "📊 *Your Referral Statistics:*\n\n"
+            "📊 *Your invite statistics:*\n\n"
             "• *Total invited users:* {total_ref}\n"
             "• *Active friends:* {active_ref}\n"
-            "• *Earned referral coins:* {earned_coins}"
+            "• *Earned invite coins:* {earned_coins}"
         )
     },
     "invite_center_text": {
         "uz": (
-            "👥 *Takliflar Markazi*\n\n"
+            "👥 *Takliflar markazi*\n\n"
             "🎁 Do'stlaringizni taklif qiling va Coin to'plab, *Premium* obunasini mutlaqo bepul qo'lga kiriting!\n\n"
-            "🔗 *Sizning referal havolangiz:*\n"
+            "🔗 *Sizning shaxsiy taklif havolangiz:*\n"
             "`{ref_link}`\n\n"
             "📊 *Statistika:*\n"
             "• 👥 Jami taklif qilinganlar: *{total_ref}*\n"
@@ -454,28 +445,28 @@ MESSAGES = {
             "4️⃣ Soxta akkauntlar va o'z-o'zini taklif qilish hisobga olinmaydi."
         ),
         "ru": (
-            "👥 *Invite Center (Центр Приглашений)*\n\n"
+            "👥 *Центр приглашений*\n\n"
             "Приглашайте друзей и получайте Premium подписку абсолютно *бесплатно*!\n\n"
-            "🔗 *Ваша реферальная ссылка:*\n`{ref_link}`\n\n"
+            "🔗 *Ваша пригласительная ссылка:*\n`{ref_link}`\n\n"
             "📊 *Статистика приглашений:*\n"
             "• 👥 *Всего приглашено:* {total_ref} чел.\n"
-            "• ✅ *Активные (выполнившие условия):* {active_ref} чел.\n"
+            "• ✅ *Активные друзья:* {active_ref} чел.\n"
             "• 🪙 *Заработано монет:* {earned_coins} 🪙 Монет\n\n"
             "🛡 *Правила защиты от накрутки:*\n"
             "1️⃣ За каждого *✅ Активного друга* вы получаете *100 🪙 Монет* *(300 Монет = 7 дней Premium)*!\n"
             "2️⃣ Чтобы друг считался активным, он должен *подписаться на канал И скачать минимум 1 видео или музыку* через бота.\n"
-            "3️⃣ Фейковые аккаунты (накрутка) не учитываются системой."
+            "3️⃣ Фейковые аккаунты не учитываются системой."
         ),
         "en": (
             "👥 *Invite Center*\n\n"
             "Invite your friends and get Premium access completely *for free*!\n\n"
-            "🔗 *Your Personal Referral Link:*\n`{ref_link}`\n\n"
-            "📊 *Your Referral Statistics:*\n"
-            "• 👥 *Total Invited Users:* {total_ref}\n"
-            "• ✅ *Active Verified Friends:* {active_ref}\n"
-            "• 🪙 *Earned Referral Coins:* {earned_coins} 🪙 Coins\n\n"
+            "🔗 *Your Personal invite Link:*\n`{ref_link}`\n\n"
+            "📊 *Your invite statistics:*\n"
+            "• 👥 *Total invited ssers:* {total_ref}\n"
+            "• ✅ *Active verified friends:* {active_ref}\n"
+            "• 🪙 *Earned invite coins:* {earned_coins} 🪙 coins\n\n"
             "🛡 *Anti-Cheat Rules:*\n"
-            "1️⃣ You get *100 🪙 Coins* for each *✅ Active verified friend* *(300 Coins = 7 Days Premium)*!\n"
+            "1️⃣ You get *100 🪙 coins* for each *✅ Active verified friend* *(300 Coins = 7 Days Premium)*!\n"
             "2️⃣ To be verified as active, your friend must *join the required channel AND download at least 1 video or audio* using the bot.\n"
             "3️⃣ Fake/bot-farmed accounts or self-referrals will not be counted."
         )
