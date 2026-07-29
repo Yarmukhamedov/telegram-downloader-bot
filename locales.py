@@ -262,53 +262,50 @@ MESSAGES = {
     },
     "shop_text": {
         "uz": (
-            "🛍 *Do'kon va Promokodlar Markazi*\n\n"
-            "💰 *Sizning balansingiz:* *{coins} 🪙 Coin*\n\n"
-            "Bu yerda siz yig'ishga muvaffaq bo'lgan Coinlaringizga Premium tariflar yoki qo'shimcha yuklash limitlarini sotib olishingiz mumkin.\n"
-            "Shuningdek, adminlar tomonidan berilgan maxsus promokodlarni kiritib instant mukofotlar oling!\n\n"
-            "👇 *Kerakli menyuni tanlang:*"
+            "💰 *Sizning balansingiz:* *{coins} 🪙 coin*\n\n"
+            "Do'konda siz yig'ishga muvaffaq bo'lgan coinlaringizga Premium tariflar yoki qo'shimcha yuklash limitlarini sotib olishingiz mumkin.\n"
+            "Shuningdek, adminlar tomonidan berilgan maxsus promokodlarni kiritib darxol mukofotlar oling!\n\n"
+            "*Kerakli menyuni tanlang:*"
         ),
         "ru": (
-            "🛍 *Магазин и Промокоды*\n\n"
-            "💰 *Ваш баланс:* *{coins} 🪙 Монет*\n\n"
-            "Здесь вы можете обменять заработанные Монеты на Premium тарифы или дополнительные лимиты скачиваний.\n"
+            "💰 *Ваш баланс:* *{coins} 🪙 монет*\n\n"
+            "В магазине вы можете обменять заработанные монеты на Premium тарифы или дополнительные лимиты скачиваний.\n"
             "Также вводите специальные промокоды от администрации и получайте подарки!\n\n"
-            "👇 *Выберите нужный пункт:*"
+            "*Выберите нужный пункт:*"
         ),
         "en": (
-            "🛍 *Shop & Redeem Center*\n\n"
-            "💰 *Your Balance:* *{coins} 🪙 Coins*\n\n"
+            "💰 *Your balance:* *{coins} 🪙 coins*\n\n"
             "Here you can exchange your earned Coins for Premium plans or extra download limits.\n"
             "You can also enter special promotional codes to claim instant rewards!\n\n"
-            "👇 *Select an option below:*"
+            "*Select an option below:*"
         )
     },
     "balance_text": {
         "uz": (
-            "🪙 *Sizning Coin balansingiz:* *{coins} 🪙 Coin*\n\n"
+            "🪙 *Sizning coin balansingiz:* *{coins} coin*\n\n"
             "💡 *Coin qanday yig'iladi?*\n"
-            "• 👥 *Invite Center* orqali do'stlaringizni botga taklif qiling (+100 Coin har bir do'st uchun).\n"
-            "• 🎁 Adminlar bergan maxsus *Promokodlar*ni faollashtiring.\n\n"
-            "🛍 Coinlarni *Do'kon (Shop)* orqali Premium va qo'shimcha limitlarga almashtirishingiz mumkin!"
+            "• 👥 *Taklif qilish* orqali do'stlaringizni botga taklif qiling va har bir do'st uchun 100 coindan ishlang).\n"
+            "• 🎁 Adminlar bergan maxsus *Promokodlar*ni faollashtirish orqali ham balancingini oshiring.\n\n"
+            "🛍 Coinlarni *Do'kon* orqali Premium va qo'shimcha limitlarga almashtirishingiz mumkin!"
         ),
         "ru": (
-            "🪙 *Ваш баланс Монет:* *{coins} 🪙 Монет*\n\n"
+            "🪙 *Ваш баланс Монет:* *{coins} монет*\n\n"
             "💡 *Как заработать Монеты?*\n"
-            "• 👥 Приглашайте друзей через *Invite Center* (+100 Монет за каждого друга).\n"
-            "• 🎁 Активируйте специальные *Промокоды* от администрации.\n\n"
-            "🛍 Монеты можно обменять на Premium и лимиты в *Магазине (Shop)*!"
+            "• 👥 Приглашайте друзей через *Центр приглашений* и получайте 100 монет за каждого друга.\n"
+            "• 🎁 Активируйте специальные *Промокоды* от администрации и пополняйте баланс.\n\n"
+            "🛍 Монеты можно обменять на Premium и лимиты в *Магазине*!"
         ),
         "en": (
-            "🪙 *Your Coin Balance:* *{coins} 🪙 Coins*\n\n"
+            "🪙 *Your coin balance:* *{coins} coins*\n\n"
             "💡 *How to earn Coins?*\n"
-            "• 👥 Invite friends via *Invite Center* (+100 Coins per referral).\n"
+            "• 👥 Invite friends via *Invite Center* and earn +100 coins per invitation.\n"
             "• 🎁 Redeem special *Promo Codes* from admins.\n\n"
             "🛍 You can exchange Coins for Premium and extra limits in the *Shop*!"
         )
     },
     "buy_premium_text": {
         "uz": (
-            "*⭐ Premium Obunasi*\n\n"
+            "*⭐ Premium obuna*\n\n"
             "*Premium bilan nimalarga ega bo'lasiz?*\n"
             "• *Cheksiz Yuklashlar:* Hech qanday kunlik yuklash limitlarsiz\n"
             "• *Eng Yuqori Sifat:* 1080p Full HD va 4K Ultra HD yuklash qobiliyati\n"
@@ -338,27 +335,15 @@ MESSAGES = {
     "use_coins_text": {
         "uz": (
             "*Sizning joriy balansingiz:* {coins} coin\n\n"
-            "*Coinlaringizga nimalar olishingiz mumkin?*\n"
-            "• *7 kunlik Premium:* 300 coin\n"
-            "• *30 kunlik Premium:* 1,000 coin\n"
-            "• *+50 kunlik limit:* 50 coin — bugun uchun qo'shimcha 50 ta video yuklash limiti.\n\n"
-            "*Shartlar:* Coinlarni Invite Center orqali do'stlaringizni taklif qilish (+100 coin har bir do'st uchun) yoki adminlar bergan promokodlarni faollashtirish orqali bepul yig'ishingiz mumkin."
+            "*Coinlaringizga quyidagi xizmatlarga sarflashingiz mumkin:*\n"
         ),
         "ru": (
             "*Ваш текущий баланс:* {coins} монет\n\n"
-            "*Что можно получить за монеты?*\n"
-            "• *7 дней Premium:* 300 монет\n"
-            "• *30 дней Premium:* 1,000 монет\n"
-            "• *+50 лимит на день:* 50 монет — дополнительные 50 скачиваний видео на сегодня.\n\n"
-            "*Условия:* Зарабатывайте монеты бесплатно, приглашая друзей через Invite Center (+100 монет за друга) или активируя промокоды от администрации."
+            "*Вы можете потратить свои монеты на следующие услуги:*\n"
         ),
         "en": (
             "*Your current balance:* {coins} coins\n\n"
-            "*What can you get with coins?*\n"
-            "• *7 days Premium:* 300 coins\n"
-            "• *30 days Premium:* 1,000 coins\n"
-            "• *+50 daily limit:* 50 coins — add +50 extra video download limit for today.\n\n"
-            "*Terms:* Earn Coins for free by inviting friends via Invite Center (+100 Coins per friend) or activating admin Promo Codes."
+            "*You can spend your coins on the following services:*\n"
         )
     },
     "back_main_menu": {
