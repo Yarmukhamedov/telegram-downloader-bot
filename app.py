@@ -23,7 +23,7 @@ from database import (
     check_daily_limit, get_setting, get_admin_stats, register_user_with_referral,
     get_user_referrals, grant_premium, get_user_coins, add_user_coins,
     get_user_language, set_user_language, get_referral_stats, verify_referral_activity,
-    create_redeem_code, redeem_code
+    create_redeem_code, redeem_code, get_user_total_downloads
 )
 from downloader import (
     detect_platform_and_url, download_media, get_video_metadata,
@@ -232,6 +232,8 @@ async def cmd_profile(message: types.Message, state: FSMContext):
     }
     pref_q = q_map.get(user['preferred_quality'], "📺 720p HD")
     user_fname = message.from_user.full_name or user.get('full_name') or message.from_user.first_name or "Foydalanuvchi"
+    joined_at = user['joined_at'][:10] if user.get('joined_at') else "N/A"
+    total_downloads = await get_user_total_downloads(user['user_id'])
 
     text = get_text("profile_text", lang,
                     user_id=user['user_id'],
@@ -240,7 +242,9 @@ async def cmd_profile(message: types.Message, state: FSMContext):
                     coins=user.get('coins', 0),
                     daily_downloads=user['daily_downloads'],
                     daily_limit=daily_limit,
-                    pref_q=pref_q)
+                    pref_q=pref_q,
+                    joined_at=joined_at,
+                    total_downloads=total_downloads)
     await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
 
 @dp.message(F.text.in_(get_all_button_texts("btn_balance")))
@@ -272,7 +276,9 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
         q_map = {'best': "🎬 1080p / 4K", '720p': "📺 720p HD", '480p': "📱 480p SD", 'mp3': "🎵 MP3 Audio", 'ask': "❓ Ask"}
         pref_q = q_map.get(user['preferred_quality'], "📺 720p HD")
         user_fname = message.from_user.full_name or user.get('full_name') or message.from_user.first_name or "Foydalanuvchi"
-        text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user_fname, status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q)
+        joined_at = user['joined_at'][:10] if user.get('joined_at') else "N/A"
+        total_downloads = await get_user_total_downloads(user['user_id'])
+        text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user_fname, status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q, joined_at=joined_at, total_downloads=total_downloads)
         await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
     else:
         await state.clear()

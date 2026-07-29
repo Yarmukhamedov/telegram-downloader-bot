@@ -207,6 +207,8 @@ MESSAGES = {
             "*Ism:* {full_name}\n"
             "*ID:* `{user_id}`\n"
             "*Tarif:* {status_str}\n"
+            "*Ro'yxatdan o'tilgan sana:* {joined_at}\n"
+            "*Jami yuklangan videolar:* {total_downloads} ta\n"
             "*Bugungi yuklashlar:* {daily_downloads}/{daily_limit}"
         ),
         "ru": (
@@ -214,6 +216,8 @@ MESSAGES = {
             "*Имя:* {full_name}\n"
             "*ID:* `{user_id}`\n"
             "*Тариф:* {status_str}\n"
+            "*Дата регистрации:* {joined_at}\n"
+            "*Всего скачано видео:* {total_downloads}\n"
             "*Скачиваний сегодня:* {daily_downloads}/{daily_limit}"
         ),
         "en": (
@@ -221,6 +225,8 @@ MESSAGES = {
             "*Name:* {full_name}\n"
             "*ID:* `{user_id}`\n"
             "*Plan:* {status_str}\n"
+            "*Registration date:* {joined_at}\n"
+            "*Total videos downloaded:* {total_downloads}\n"
             "*Downloads today:* {daily_downloads}/{daily_limit}"
         )
     },

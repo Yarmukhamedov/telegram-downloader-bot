@@ -412,3 +412,9 @@ async def redeem_code(user_id: int, code: str) -> tuple[bool, str, int]:
             
         await db.commit()
         return True, reward_type, reward_value
+
+async def get_user_total_downloads(user_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM downloads_history WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else 0
