@@ -450,30 +450,27 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
 
 from aiogram.filters import StateFilter
 
-@dp.message(StateFilter(None), F.text)
+IGNORED_BUTTONS = [
+    "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality",
+    "👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan",
+    "ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help",
+    "🛠 Admin Panel", "🛠 Админ панель",
+    "👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center",
+    "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem", "🛍 Do'kon", "🛍 Магазин", "🛍 Shop",
+    "👑 Buy Premium", "👑 Купить Premium", "🪙 Use Coins", "🪙 Использовать монеты",
+    "🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language",
+    "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
+    "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
+    "🔙 Orqaga", "🔙 Назад", "🔙 Back", "⬅️ Orqaga", "⬅️ Назад", "⬅️ Back",
+    "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu",
+    "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code",
+    "📊 Statistika", "📢 Xabar yuborish", "🎁 Premium hadya etish", "🪙 Coin Ulashishi",
+    "🎟 Promokodlar", "📢 Majburiy obuna kanali"
+]
+
+@dp.message(StateFilter(None), F.text, ~F.text.startswith("/"), ~F.text.in_(IGNORED_BUTTONS))
 async def handle_media_download(message: types.Message, bot: Bot):
     logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
-    if message.text.startswith("/"):
-        return
-
-    if message.text in [
-        "⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality",
-        "👤 Profil / Tarif", "👤 Профиль / Тариф", "👤 Profile / Plan",
-        "ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help",
-        "🛠 Admin Panel", "🛠 Админ панель",
-        "👥 Invite Center (Takliflar)", "👥 Приглашения (Invite Center)", "👥 Invite Center",
-        "🛍 Do'kon va Promokod", "🛍 Магазин и Промокоды", "🛍 Shop & Redeem", "🛍 Do'kon", "🛍 Магазин", "🛍 Shop",
-        "👑 Buy Premium", "👑 Купить Premium", "🪙 Use Coins", "🪙 Использовать монеты",
-        "🌐 Tilni o'zgartirish / Язык / Language", "🌐 Изменить язык / Язык / Language", "🌐 Change Language / Язык / Language",
-        "🌐 Til / Язык / Language", "🌐 Язык / Til / Language", "🌐 Language / Til / Язык",
-        "🪙 Balans (Coinlar)", "🪙 Баланс (Монеты)", "🪙 Balance (Coins)",
-        "🔙 Orqaga", "🔙 Назад", "🔙 Back", "⬅️ Orqaga", "⬅️ Назад", "⬅️ Back",
-        "🏠 Bosh Menu", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main Menu",
-        "🎟 Promokod kiritish (Redeem Code)", "🎟 Ввести промокод (Redeem Code)", "🎟 Enter Redeem Code",
-        "📊 Statistika", "📢 Xabar yuborish", "🎁 Premium hadya etish", "🪙 Coin Ulashishi",
-        "🎟 Promokodlar", "📢 Majburiy obuna kanali"
-    ]:
-        return
 
     if message.text.startswith("/redeem"):
         await cmd_redeem_prompt(message)
