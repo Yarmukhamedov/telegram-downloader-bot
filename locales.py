@@ -8,14 +8,14 @@ MESSAGES = {
         "en": "⚙️ Settings"
     },
     "btn_quality": {
-        "uz": "🎬 Sifat (Quality)",
-        "ru": "🎬 Качество (Quality)",
+        "uz": "🎬 Sifat",
+        "ru": "🎬 Качество",
         "en": "🎬 Quality"
     },
     "btn_profile": {
-        "uz": "👤 Profil / Tarif",
-        "ru": "👤 Профиль / Тариф",
-        "en": "👤 Profile / Plan"
+        "uz": "👤 Profil",
+        "ru": "👤 Профиль",
+        "en": "👤 Profile"
     },
     "btn_help": {
         "uz": "ℹ️ Yordam",
@@ -28,18 +28,18 @@ MESSAGES = {
         "en": "🛠 Admin Panel"
     },
     "btn_invite_center": {
-        "uz": "👥 Invite Center (Takliflar)",
-        "ru": "👥 Приглашения (Invite Center)",
+        "uz": "👥 Takliflar markazi",
+        "ru": "👥 Приглашения",
         "en": "👥 Invite Center"
     },
     "btn_invite_link": {
-        "uz": "🔗 Invite Link",
-        "ru": "🔗 Invite Link",
+        "uz": "🔗 Taklif havolasi",
+        "ru": "🔗 Ссылка приглашения",
         "en": "🔗 Invite Link"
     },
     "btn_invite_stats": {
-        "uz": "📊 Invite Stats",
-        "ru": "📊 Invite Stats",
+        "uz": "📊 Takliflar statistikasi",
+        "ru": "📊 Статистика приглашений",
         "en": "📊 Invite Stats"
     },
     "btn_shop_redeem": {
@@ -48,9 +48,9 @@ MESSAGES = {
         "en": "🛍 Shop"
     },
     "btn_balance": {
-        "uz": "🪙 Balans (Coinlar)",
-        "ru": "🪙 Баланс (Монеты)",
-        "en": "🪙 Balance (Coins)"
+        "uz": "🪙 Balans",
+        "ru": "🪙 Баланс",
+        "en": "🪙 Balance"
     },
     "btn_back": {
         "uz": "⬅️ Orqaga",
@@ -73,65 +73,89 @@ MESSAGES = {
         "en": "👑 Buy Premium"
     },
     "btn_use_coins": {
-        "uz": "🪙 Use Coins",
+        "uz": "🪙 Coinni ishlatish",
         "ru": "🪙 Использовать монеты",
         "en": "🪙 Use Coins"
     },
     "btn_language": {
-        "uz": "🌐 Til / Язык / Language",
-        "ru": "🌐 Язык / Til / Language",
-        "en": "🌐 Language / Til / Язык"
+        "uz": "🌐 Til",
+        "ru": "🌐 Язык",
+        "en": "🌐 Language"
     },
     "btn_buy_stars": {
-        "uz": "⭐ Telegram Stars bilan (50 ⭐ / 1 oy)",
+        "uz": "⭐ Telegram Stars (50 ⭐ / 1 oy)",
         "ru": "⭐ Telegram Stars (50 ⭐ / 1 мес)",
         "en": "⭐ Telegram Stars (50 ⭐ / 1 month)"
     },
     "btn_buy_card": {
-        "uz": "💳 Karta bilan (Click/Payme - 15,000 so'm)",
-        "ru": "💳 Картой (Click/Payme - 15,000 сум)",
-        "en": "💳 Via Card (Click/Payme - 15,000 UZS)"
+        "uz": "💳 Karta (15,000 so'm)",
+        "ru": "💳 Картой (15,000 сум)",
+        "en": "💳 Via Card (15,000 UZS)"
     },
     "btn_redeem_code": {
-        "uz": "🎟 Promokod kiritish (Redeem Code)",
-        "ru": "🎟 Ввести промокод (Redeem Code)",
+        "uz": "🎟 Promokod kiritish",
+        "ru": "🎟 Ввести промокод",
         "en": "🎟 Enter Redeem Code"
     },
     "btn_shop_vip7": {
-        "uz": "👑 7 kunlik Premium (300 🪙)",
-        "ru": "👑 7 дней Premium (300 🪙)",
-        "en": "👑 7 Days Premium (300 🪙)"
+        "uz": "👑 7 kunlik Premium - 300 🪙",
+        "ru": "👑 7 дней Premium - 300 🪙",
+        "en": "👑 7 Days Premium - 300 🪙"
     },
     "btn_shop_vip30": {
-        "uz": "👑 30 kunlik Premium (1000 🪙)",
-        "ru": "👑 30 дней Premium (1000 🪙)",
-        "en": "👑 30 Days Premium (1000 🪙)"
+        "uz": "👑 30 kunlik Premium - 1000 🪙",
+        "ru": "👑 30 дней Premium - 1000 🪙",
+        "en": "👑 30 Days Premium - 1000 🪙"
     },
     "btn_shop_limit": {
-        "uz": "⚡️ Bugunga +20 yuklash limit (50 🪙)",
-        "ru": "⚡️ +20 скачиваний на сегодня (50 🪙)",
-        "en": "⚡️ +20 Downloads Today (50 🪙)"
+        "uz": "⚡️ Limitni yana +20 yuklashga oshirish - 50 🪙",
+        "ru": "⚡️ +20 скачиваний на сегодня - 50 🪙",
+        "en": "⚡️ Increase limit +20 downloads - 50 🪙"
     },
 
     # Welcome & Help
     "welcome": {
         "uz": (
             "👋 *Assalomu alaykum, {name}!*\n\n"
-            "Mening ismim *{bot_name}* — ijtimoiy tarmoqlardan (YouTube, TikTok, Instagram, Pinterest va boshqalar) videolarni eng yuqori sifatda, hech qanday suv belgisiz (No Watermark) yuklab beradigan super botman! 🚀\n\n"
-            "⚡️ Shunchaki video havolasini menga yuboring!\n"
-            "🎁 Bepul Premium olish, Coin yig'ish va Tariflar bilan tanishish uchun *👤 Profil / Tarif* yoki *👥 Invite Center* bo'limiga o'ting."
+            "📥 Ushbu bot orqali quyidagi platformalardan media fayllarni eng yuqori sifatda yuklab olishingiz mumkin:\n\n"
+            "• 🎥 YouTube\n"
+            "• 📸 Instagram\n"
+            "• 🎵 TikTok\n"
+            "• 📌 Pinterest\n\n"
+            "✨ Imkoniyatlar:\n"
+            "• 4K gacha bo'lgan videolarni yuklab olish (agar manbada mavjud bo'lsa)\n"
+            "• HD sifatdagi rasmlarni yuklab olish\n"
+            "• Reels, Shorts, Stories va oddiy postlarni qo'llab-quvvatlash\n"
+            "• Tezkor va sifatni yo'qotmasdan yuklab berish\n\n"
+            "🚀 Boshlash uchun havolani yuboring!"
         ),
         "ru": (
             "👋 *Здравствуйте, {name}!*\n\n"
-            "Я *{bot_name}* — бот для скачивания видео с социальных сетей (YouTube, TikTok, Instagram, Pinterest и др.) в высоком качестве без водяных знаков! 🚀\n\n"
-            "⚡️ Просто отправьте мне ссылку на видео!\n"
-            "🎁 Для получения бесплатного Premium, монет и управления тарифами перейдите в *👤 Профиль / Тариф* или *👥 Invite Center*."
+            "📥 С помощью этого бота вы можете скачивать видео и изображения в максимальном качестве со следующих платформ:\n\n"
+            "• 🎥 YouTube\n"
+            "• 📸 Instagram\n"
+            "• 🎵 TikTok\n"
+            "• 📌 Pinterest\n\n"
+            "✨ Возможности:\n"
+            "• Загрузка видео до 4K (если доступно)\n"
+            "• Загрузка изображений в высоком качестве\n"
+            "• Поддержка Reels, Shorts, Stories и обычных публикаций\n"
+            "• Быстрая загрузка без потери качества\n\n"
+            "📎 Просто отправьте ссылку, чтобы начать."
         ),
         "en": (
             "👋 *Hello, {name}!*\n\n"
-            "I am *{bot_name}* — a super bot for downloading videos from social networks (YouTube, TikTok, Instagram, Pinterest, etc.) in the highest quality without watermarks! 🚀\n\n"
-            "⚡️ Just send me any video link!\n"
-            "🎁 To get free Premium, earn Coins, and check plans, go to *👤 Profile / Plan* or *👥 Invite Center*."
+            "📥 Download videos and images in the highest available quality from the following platforms:\n\n"
+            "• 🎥 YouTube\n"
+            "• 📸 Instagram\n"
+            "• 🎵 TikTok\n"
+            "• 📌 Pinterest\n\n"
+            "✨ Features:\n"
+            "• Download videos up to 4K (when available)\n"
+            "• Download high-quality images\n"
+            "• Supports Reels, Shorts, Stories, and regular posts\n"
+            "• Fast downloads with no quality loss\n\n"
+            "📎 Send a link to get started."
         )
     },
     "help_text": {
@@ -180,22 +204,22 @@ MESSAGES = {
     "profile_text": {
         "uz": (
             "👤 *Sizning Profilingiz*\n\n"
+            "*Ism:* {full_name}\n"
             "*ID:* `{user_id}`\n"
-            "*Ism:* {full_name}\n\n"
             "*Tarif:* {status_str}\n"
             "*Bugungi yuklashlar:* {daily_downloads}/{daily_limit}"
         ),
         "ru": (
             "👤 *Ваш Профиль*\n\n"
+            "*Имя:* {full_name}\n"
             "*ID:* `{user_id}`\n"
-            "*Имя:* {full_name}\n\n"
             "*Тариф:* {status_str}\n"
             "*Скачиваний сегодня:* {daily_downloads}/{daily_limit}"
         ),
         "en": (
             "👤 *Your Profile*\n\n"
+            "*Name:* {full_name}\n"
             "*ID:* `{user_id}`\n"
-            "*Name:* {full_name}\n\n"
             "*Plan:* {status_str}\n"
             "*Downloads today:* {daily_downloads}/{daily_limit}"
         )
@@ -310,12 +334,12 @@ MESSAGES = {
     # Invite Center & Anti-Cheat
     "invite_center_welcome": {
         "uz": (
-            "👥 *Invite Center (Takliflar Markazi)*\n\n"
+            "👥 *Takliflar Markazi*\n\n"
             "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini *bepulga* qo'lga kiriting!\n\n"
             "👇 *Kerakli menyuni tanlang:*"
         ),
         "ru": (
-            "👥 *Invite Center (Центр Приглашений)*\n\n"
+            "👥 *Центр Приглашений*\n\n"
             "Приглашайте друзей и получайте Premium подписку абсолютно *бесплатно*!\n\n"
             "👇 *Выберите нужный пункт:*"
         ),
@@ -376,17 +400,22 @@ MESSAGES = {
     },
     "invite_center_text": {
         "uz": (
-            "👥 *Invite Center (Takliflar Markazi)*\n\n"
-            "Do'stlaringizni taklif qiling va botimizning haqiqiy Premium obunasini *bepulga* qo'lga kiriting!\n\n"
-            "🔗 *Sizning shaxsiy havolangiz:*\n`{ref_link}`\n\n"
-            "📊 *Sizning takliflaringiz statistikasi:*\n"
-            "• 👥 *Jami taklif qilinganlar:* {total_ref} kishi\n"
-            "• ✅ *Faol (shartni bajargan) do'stlar:* {active_ref} kishi\n"
-            "• 🪙 *Referaldan yig'ilgan Coinlar:* {earned_coins} 🪙 Coin\n\n"
-            "🛡 *Anti-Nakrutka Qoidalari:*\n"
-            "1️⃣ Har bir *✅ Faol do'stingiz* uchun sizga *100 🪙 Coin* beriladi *(300 Coin = 7 kunlik Premium)*!\n"
-            "2️⃣ Do'stingiz faol hisoblanishi uchun u botga kirishi, *kanalga obuna bo'lishi VA kamida 1 ta video yoki musiqa yuklab olishi shart*.\n"
-            "3️⃣ Soxta (nakrutka) akkauntlar yoki o'zingizni o'zingiz taklif qilishingiz hisobga olinmaydi."
+            "👥 *Takliflar Markazi*\n\n"
+            "🎁 Do'stlaringizni taklif qiling va Coin to'plab, *Premium* obunasini mutlaqo bepul qo'lga kiriting!\n\n"
+            "🔗 *Sizning referal havolangiz:*\n"
+            "`{ref_link}`\n\n"
+            "📊 *Statistika:*\n"
+            "• 👥 Jami taklif qilinganlar: *{total_ref}*\n"
+            "• ✅ Faol do'stlar: *{active_ref}*\n"
+            "• 🪙 Jami Coin: *{earned_coins}*\n\n"
+            "💰 *Mukofotlar:*\n"
+            "• Har bir faol do'st uchun *100 🪙 Coin*\n"
+            "• *300 🪙 Coin = 7 kun Premium*\n\n"
+            "🛡 *Qoidalar:*\n"
+            "1️⃣ Taklif qilingan foydalanuvchi botni ishga tushirishi kerak.\n"
+            "2️⃣ Rasmiy kanalga obuna bo'lishi kerak.\n"
+            "3️⃣ Kamida 1 ta video yoki rasm yuklab olishi kerak.\n"
+            "4️⃣ Soxta akkauntlar va o'z-o'zini taklif qilish hisobga olinmaydi."
         ),
         "ru": (
             "👥 *Invite Center (Центр Приглашений)*\n\n"
@@ -417,22 +446,22 @@ MESSAGES = {
     },
     "ref_success_notice": {
         "uz": (
-            "🎉 *Tabriklaymiz! Yangi faol referal tasdiqlandi!*\n\n"
+            "🎉 *Tabriklaymiz! Sizning referal havolangiz orqali foydalanuvchi tasdiqlandi!*\n\n"
             "👤 Sizning havolangiz orqali qo'shilgan do'stingiz botdan birinchi videosini yuklab oldi va qoidalarni bajardi!\n"
-            "💰 Hisobingizga *+100 🪙 Coin* qo'shildi! Hozirgi balansingiz: *{coins} 🪙 Coin*.\n\n"
-            "👑 Coinlarni *🛍 Do'kon* da bepul Premium tariflarga almashtiring!"
+            "💰 Hisobingizga *🪙 +100 coin* qo'shildi! Hozirgi balansingiz: *🪙 {coins} coin*.\n\n"
+            "👑 Coinlarni *🛍 Do'kon*da bepul Premium tariflarga almashtiring!"
         ),
         "ru": (
             "🎉 *Поздравляем! Подтвержден новый активный реферал!*\n\n"
             "👤 Друг, приглашенный по вашей ссылке, скачал первое видео и выполнил все условия!\n"
-            "💰 На ваш баланс начислено *+100 🪙 Монет*! Текущий баланс: *{coins} 🪙 Монет*.\n\n"
+            "💰 На ваш баланс начислено *🪙 +100 монет*! Текущий баланс: *🪙 {coins} монет*.\n\n"
             "👑 Обменивайте монеты на Premium в *🛍 Магазине*!"
         ),
         "en": (
             "🎉 *Congratulations! New active referral verified!*\n\n"
             "👤 A friend invited via your link downloaded their first video and fulfilled all conditions!\n"
-            "💰 You earned *+100 🪙 Coins*! Your current balance: *{coins} 🪙 Coins*.\n\n"
-            "👑 Exchange your Coins for free Premium in the *🛍 Shop*!"
+            "💰 You earned *🪙 +100 coins*! Your current balance: *🪙 {coins} coins*.\n\n"
+            "👑 Exchange your coins for free Premium in the *🛍 Shop*!"
         )
     },
 
@@ -450,14 +479,14 @@ MESSAGES = {
 
     # Queue & Limits
     "queue_msg": {
-        "uz": "⏳ *Serverda yuklash navbati:* Siz navbatda turibsiz. Video tez orada yuklanadi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*",
-        "ru": "⏳ *Очередь загрузки:* Вы находитесь в очереди. Видео скоро загрузится...\n\n💎 *Подписчики Premium скачивают без очереди!*",
-        "en": "⏳ *Download Queue:* You are in queue. Video will start downloading shortly...\n\n💎 *Premium subscribers download instantly without waiting!*"
+        "uz": "⏳ *Serverda yuklash navbati:* Siz navbatda turibsiz. Video tez orada yuklanadi...\n\n👑 *Premium obunachilar navbatsiz tezkor yuklaydi!*",
+        "ru": "⏳ *Очередь загрузки:* Вы находитесь в очереди. Видео скоро загрузится...\n\n👑 *Подписчики Premium скачивают без очереди!*",
+        "en": "⏳ *Download Queue:* You are in queue. Video will start downloading shortly...\n\n👑 *Premium subscribers download instantly without waiting!*"
     },
     "limit_exceeded": {
-        "uz": "❌ *Bugungi kunlik bepul yuklash limitingiz (15/15) tugadi!*\n\n⚡️ Limitni kengaytirish yoki cheksiz yuklash uchun *🛍 Do'kon* dan Premium oling yoki do'stlaringizni taklif qiling!",
-        "ru": "❌ *Ваш дневной бесплатный лимит скачиваний (15/15) исчерпан!*\n\n⚡️ Для снятия лимитов приобретите Premium в *🛍 Магазине* или приглашайте друзей!",
-        "en": "❌ *Your daily free download limit (15/15) is exhausted!*\n\n⚡️ To get unlimited downloads, get Premium in the *🛍 Shop* or invite friends!"
+        "uz": "❌ *Bugungi kunlik bepul yuklash limitingiz tugadi!*\n\n⚡️ Limitni kengaytirish yoki cheksiz yuklash uchun *🛍 Do'kon* dan Premium oling yoki do'stlaringizni taklif qiling!",
+        "ru": "❌ *Ваш дневной бесплатный лимит скачиваний исчерпан!*\n\n⚡️ Для снятия лимитов приобретите Premium в *🛍 Магазине* или приглашайте друзей!",
+        "en": "❌ *Your daily free download limit is exhausted!*\n\n⚡️ To get unlimited downloads, get Premium in the *🛍 Shop* or invite friends!"
     }
 }
 
