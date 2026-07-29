@@ -5,16 +5,27 @@ from locales import get_text
 def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
-            KeyboardButton(text=get_text("btn_settings", lang)),
-            KeyboardButton(text=get_text("btn_profile", lang))
+            KeyboardButton(text=get_text("btn_profile", lang)),
+            KeyboardButton(text=get_text("btn_settings", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_help", lang)),
-            KeyboardButton(text=get_text("btn_language", lang))
+            KeyboardButton(text=get_text("btn_help", lang))
         ]
     ]
     if is_admin:
         buttons.append([KeyboardButton(text=get_text("btn_admin", lang))])
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
+def get_settings_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    buttons = [
+        [
+            KeyboardButton(text=get_text("btn_quality", lang)),
+            KeyboardButton(text=get_text("btn_language", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_main_menu", lang))
+        ]
+    ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 def get_admin_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:

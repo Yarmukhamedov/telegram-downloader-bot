@@ -35,7 +35,7 @@ from keyboards import (
     get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
     get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
     get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
-    get_invite_center_reply_keyboard
+    get_invite_center_reply_keyboard, get_settings_reply_keyboard
 )
 from locales import get_text
 from admin import admin_router, get_admin_ids
@@ -140,9 +140,15 @@ async def cb_set_lang(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.message(Command("settings"))
+@dp.message(F.text.in_(["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings"]))
+async def cmd_settings_menu(message: types.Message):
+    lang = await get_user_language(message.from_user.id)
+    text = get_text("settings_title", lang)
+    await message.answer(text, reply_markup=get_settings_reply_keyboard(lang), parse_mode="Markdown")
+
 @dp.message(Command("quality"))
-@dp.message(F.text.in_(["⚙️ Sozlamalar", "⚙️ Настройки", "⚙️ Settings", "🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality"]))
-async def cmd_settings(message: types.Message):
+@dp.message(F.text.in_(["🎬 Sifat (Quality)", "🎬 Качество (Quality)", "🎬 Quality"]))
+async def cmd_quality_settings(message: types.Message):
     logger.info(f">>> Sifat/Quality clicked by user_id: {message.from_user.id}")
     user = await get_or_create_user(message.from_user.id)
     is_admin = message.from_user.id in get_admin_ids()

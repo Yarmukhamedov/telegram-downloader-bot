@@ -2,8 +2,12 @@
 # Multi-Language Translation Module (i18n) for Telegram Downloader Bot
 
 MESSAGES = {
-    # Buttons
     "btn_settings": {
+        "uz": "⚙️ Sozlamalar",
+        "ru": "⚙️ Настройки",
+        "en": "⚙️ Settings"
+    },
+    "btn_quality": {
         "uz": "🎬 Sifat (Quality)",
         "ru": "🎬 Качество (Quality)",
         "en": "🎬 Quality"
@@ -57,6 +61,11 @@ MESSAGES = {
         "uz": "🏠 Bosh Menu",
         "ru": "🏠 Главное меню",
         "en": "🏠 Main Menu"
+    },
+    "settings_title": {
+        "uz": "⚙️ *Sozlamalar bo'limi:*\n\nO'zingizga kerakli bo'limni tanlang:",
+        "ru": "⚙️ *Раздел настроек:*\n\nВыберите нужный раздел:",
+        "en": "⚙️ *Settings Section:*\n\nSelect the desired section:"
     },
     "btn_buy_prem_menu": {
         "uz": "👑 Buy Premium",
