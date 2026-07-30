@@ -577,6 +577,8 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
     status_msg = await message.answer(get_text("processing_link", lang, icon=icon, platform=platform), parse_mode="Markdown")
     loop = asyncio.get_event_loop()
     
+    last_update_time = [0.0]
+
     async def safe_edit_status(text: str):
         try:
             await status_msg.edit_text(text, parse_mode="Markdown")
@@ -588,23 +590,26 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 pass
 
     def progress_hook(d):
-        st = d.get('status')
-        if st == 'downloading':
-            p = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_percent_str', '0%'))).strip()
-            speed = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_speed_str', 'N/A'))).strip()
-            eta = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_eta_str', 'N/A'))).strip()
-            
-            current_time = loop.time()
-            if current_time - last_update_time[0] >= 1.5:
-                last_update_time[0] = current_time
-                text = get_text("downloading_progress", lang, platform=platform, p=p, speed=speed, eta=eta)
-                asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
-        elif st == 'finished':
-            current_time = loop.time()
-            if current_time - last_update_time[0] >= 1.0:
-                last_update_time[0] = current_time
-                text = get_text("sending_telegram", lang)
-                asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
+        try:
+            st = d.get('status')
+            if st == 'downloading':
+                p = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_percent_str', '0%'))).strip()
+                speed = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_speed_str', 'N/A'))).strip()
+                eta = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_eta_str', 'N/A'))).strip()
+                
+                current_time = loop.time()
+                if current_time - last_update_time[0] >= 1.5:
+                    last_update_time[0] = current_time
+                    text = get_text("downloading_progress", lang, platform=platform, p=p, speed=speed, eta=eta)
+                    asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
+            elif st == 'finished':
+                current_time = loop.time()
+                if current_time - last_update_time[0] >= 1.0:
+                    last_update_time[0] = current_time
+                    text = get_text("sending_telegram", lang)
+                    asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
+        except Exception as err:
+            logger.warning(f"Error in progress_hook: {err}")
 
     if not is_vip and download_semaphore.locked():
         await status_msg.edit_text("⏳ *Serverda yuklash navbati:* Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
