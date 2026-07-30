@@ -94,6 +94,27 @@ async def init_db():
                 PRIMARY KEY (user_id, code)
             )
         """)
+        # Fix unapplied redeem code premiums
+        try:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("""
+                SELECT ur.user_id, rc.reward_value
+                FROM user_redeems ur
+                JOIN redeem_codes rc ON ur.code = rc.code
+                JOIN users u ON ur.user_id = u.user_id
+                WHERE LOWER(rc.reward_type) IN ('days', 'vip', 'premium', 'day') AND u.is_premium = 0
+            """) as cur:
+                unapplied = await cur.fetchall()
+            for item in unapplied:
+                uid = item['user_id']
+                val = item['reward_value']
+                until_dt = datetime.now() + timedelta(days=val)
+                until_str = until_dt.isoformat()
+                await db.execute("UPDATE users SET is_premium = 1, premium_until = ? WHERE user_id = ?", (until_str, uid))
+            await db.commit()
+        except Exception as e:
+            logger.warning(f"Redeem sync error: {e}")
+
         await db.commit()
     logger.info("Database initialized successfully.")
 
@@ -217,13 +238,25 @@ async def check_daily_limit(user_id: int, free_limit: int = 15) -> tuple[bool, i
     return user['daily_downloads'] < free_limit, user['daily_downloads']
 
 async def grant_premium(user_id: int, days: int) -> bool:
-    until_dt = datetime.now() + timedelta(days=days)
-    until_str = until_dt.isoformat()
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT is_premium, premium_until FROM users WHERE user_id = ?", (user_id,)) as cursor:
             row = await cursor.fetchone()
         if not row:
             return False
+        
+        now = datetime.now()
+        current_until = None
+        if row['is_premium'] and row['premium_until']:
+            try:
+                current_until = datetime.fromisoformat(row['premium_until'])
+            except Exception:
+                current_until = None
+        
+        start_from = current_until if (current_until and current_until > now) else now
+        until_dt = start_from + timedelta(days=days)
+        until_str = until_dt.isoformat()
+        
         await db.execute("UPDATE users SET is_premium = 1, premium_until = ? WHERE user_id = ?", (until_str, user_id))
         await db.commit()
         return True
@@ -399,18 +432,18 @@ async def redeem_code(user_id: int, code: str) -> tuple[bool, str, int]:
             
         await db.execute("INSERT INTO user_redeems (user_id, code, redeemed_at) VALUES (?, ?, ?)", (user_id, code_upper, now_str))
         await db.execute("UPDATE redeem_codes SET used_count = used_count + 1 WHERE code = ?", (code_upper,))
-        
-        reward_type = row['reward_type']
+        await db.commit()
+
+        reward_type = str(row['reward_type']).lower()
         reward_value = row['reward_value']
         
         if reward_type == 'coins':
-            await db.execute("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE user_id = ?", (reward_value, user_id))
-        elif reward_type == 'vip':
-            until_dt = datetime.now() + timedelta(days=reward_value)
-            until_str = until_dt.isoformat()
-            await db.execute("UPDATE users SET is_premium = 1, premium_until = ? WHERE user_id = ?", (until_str, user_id))
+            async with aiosqlite.connect(DB_PATH) as db2:
+                await db2.execute("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE user_id = ?", (reward_value, user_id))
+                await db2.commit()
+        elif reward_type in ['vip', 'days', 'premium', 'day']:
+            await grant_premium(user_id, reward_value)
             
-        await db.commit()
         return True, reward_type, reward_value
 
 async def get_user_total_downloads(user_id: int) -> int:
