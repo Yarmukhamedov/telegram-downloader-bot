@@ -407,14 +407,25 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
         if mp4s:
             v_url = clean(mp4s[0])
 
-    if not v_url:
-        raise Exception("Threads video URL not found in post HTML")
+    is_video = False
+    if v_url:
+        is_video = True
+        media_url = v_url
+    else:
+        img_matches = re.findall(r'\"image_versions2\":\{\"candidates\":\[\{\"height\":\d+,\"url\":\"([^\"]+)\"', html)
+        if not img_matches:
+            img_matches = re.findall(r'\"display_resources\":\[\{\"src\":\"([^\"]+)\"', html)
+        if img_matches:
+            media_url = clean(img_matches[0])
+        else:
+            raise Exception("Threads video or photo URL not found in post HTML")
 
     titles = re.findall(r'<title>(.*?)</title>', html)
-    title = titles[0].replace(" - Threads", "").replace("Threads", "").strip() if titles else "Threads Video"
+    title = titles[0].replace(" - Threads", "").replace("Threads", "").strip() if titles else "Threads Media"
 
     os.makedirs("downloads", exist_ok=True)
-    out_file = f"downloads/threads_{abs(hash(url))}.mp4"
+    ext = ".mp4" if is_video else ".jpg"
+    out_file = f"downloads/threads_{abs(hash(url))}{ext}"
     
     if progress_fn:
         try:
@@ -422,7 +433,7 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
         except Exception:
             pass
 
-    v_req = urllib.request.Request(v_url, headers={'User-Agent': 'Mozilla/5.0'})
+    v_req = urllib.request.Request(media_url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(v_req) as v_resp:
         data = v_resp.read()
         with open(out_file, 'wb') as f:
@@ -434,8 +445,8 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
         except Exception:
             pass
 
-    logger.info(f"🚀 ✅ Threads media downloaded successfully to {out_file}")
-    return out_file, {"title": title, "width": 1080, "height": 1080, "duration": 30}
+    logger.info(f"🚀 ✅ Threads media ({'Video' if is_video else 'Photo'}) downloaded successfully to {out_file}")
+    return out_file, {"title": title, "width": 1080, "height": 1080, "duration": 30, "is_photo": not is_video}
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     if "threads.com" in url or "threads.net" in url:

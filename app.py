@@ -584,17 +584,17 @@ async def check_and_notify_referral(user_id: int, bot_inst: Bot):
 async def process_and_send_media(message: types.Message, url: str, platform: str, icon: str, quality: str, bot_inst: Bot):
     user = await get_or_create_user(message.from_user.id)
     is_vip = user['is_premium']
-
     lang = user.get('language', 'uz')
     status_msg = await message.answer(get_text("processing_link", lang, icon=icon, platform=platform), parse_mode="Markdown")
     loop = asyncio.get_event_loop()
-    
     last_update_time = [0.0]
 
     async def safe_edit_status(text: str):
         try:
             await status_msg.edit_text(text, parse_mode="Markdown")
-        except Exception:
+        except Exception as e:
+            if "message is not modified" in str(e).lower():
+                return
             try:
                 plain_txt = re.sub(r'[*_`~]', '', text)
                 await status_msg.edit_text(plain_txt)
@@ -624,24 +624,37 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             logger.warning(f"Error in progress_hook: {err}")
 
     if not is_vip and download_semaphore.locked():
-        await status_msg.edit_text("⏳ *Serverda yuklash navbati:* Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*", parse_mode="Markdown")
+        await safe_edit_status("⏳ *Serverda yuklash navbati:* Siz navbatda turibsiz. Video tez orada yuklanishni boshlaydi...\n\n💎 *Premium obunachilar navbatsiz tezkor yuklaydi!*")
 
     async with download_semaphore:
         try:
             os.makedirs("downloads", exist_ok=True)
-            await status_msg.edit_text(get_text("downloading_start", lang, platform=platform), parse_mode="Markdown")
+            await safe_edit_status(get_text("downloading_start", lang, platform=platform))
             
             file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
-            title = video_info.get("title", f"{platform} Video")
-
+            title = video_info.get("title", f"{platform} Media")
             bot_info = await bot_inst.get_me()
 
-            if quality == 'mp3' or file_path.endswith(".mp3"):
-                await status_msg.edit_text(get_text("mp3_preparing", lang), parse_mode="Markdown")
+            if file_path.endswith(('.jpg', '.jpeg', '.png', '.webp')) or video_info.get("is_photo"):
+                file_size_mb = os.path.getsize(file_path) / (1024 * 1024) if os.path.exists(file_path) else 0.0
+                await safe_edit_status(get_text("step_uploading", lang, size=file_size_mb))
+                
+                photo = FSInputFile(file_path)
+                await message.answer_photo(
+                    photo,
+                    caption=f"📸 {title}\n\n🤖 @{bot_info.username}"
+                )
+                await record_download(message.from_user.id, url, platform, "Photo")
+                await check_and_notify_referral(message.from_user.id, bot_inst)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+            elif quality == 'mp3' or file_path.endswith(".mp3"):
+                await safe_edit_status(get_text("mp3_preparing", lang))
                 mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
                 
                 audio_size_mb = os.path.getsize(mp3_file) / (1024 * 1024) if os.path.exists(mp3_file) else 0.0
-                await status_msg.edit_text(get_text("step_uploading", lang, size=audio_size_mb), parse_mode="Markdown")
+                await safe_edit_status(get_text("step_uploading", lang, size=audio_size_mb))
                 
                 audio = FSInputFile(mp3_file)
                 await message.answer_audio(
@@ -655,7 +668,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                     os.remove(mp3_file)
 
             else:
-                await status_msg.edit_text(get_text("step_converting", lang), parse_mode="Markdown")
+                await safe_edit_status(get_text("step_converting", lang))
                 file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
                 
                 is_local_api = getattr(bot_inst, "_is_local_api", False) or (hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local)
