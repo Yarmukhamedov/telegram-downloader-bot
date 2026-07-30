@@ -364,9 +364,10 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
     raise Exception("Cobalt API fallback failed")
 
 def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
-    """Custom high-speed media downloader for Threads.net / Threads.com posts"""
+    """Custom high-speed media downloader for Threads.net / Threads.com posts (supports 18+ & restricted content via cookies)"""
     logger.info(f"🧵 Attempting custom Threads downloader for: {url}")
     import urllib.request
+    import http.cookiejar
     
     # 1. Resolve redirect if share URL or threads.com
     if "/share/" in url or "threads.com" in url:
@@ -379,16 +380,30 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
             
     url = url.replace("threads.com", "threads.net")
 
+    # Load cookies if cookies.txt exists for restricted/18+ content
+    opener = None
+    if os.path.exists(COOKIES_PATH):
+        try:
+            cj = http.cookiejar.MozillaCookieJar(COOKIES_PATH)
+            cj.load(ignore_discard=True, ignore_expires=True)
+            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        except Exception as cookie_err:
+            logger.warning(f"Could not load cookies.txt for Threads: {cookie_err}")
+
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
         'Sec-Fetch-Site': 'same-origin'
     }
 
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req) as resp:
-        html = resp.read().decode('utf-8', errors='ignore')
+    if opener:
+        resp = opener.open(req)
+    else:
+        resp = urllib.request.urlopen(req)
+        
+    html = resp.read().decode('utf-8', errors='ignore')
 
     def clean(s):
         return s.replace(chr(92) + '/', '/').replace(chr(92) + 'u0026', '&')
