@@ -463,7 +463,8 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
         await callback.message.edit_text("✅ Rahmat! Obuna tasdiqlandi. Endi botdan to'liq foydalanishingiz mumkin! 🚀")
         await callback.answer()
     else:
-        await callback.answer("❌ Siz hali kanalga obuna bo'lmadingiz!", show_alert=True)
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("not_subscribed_alert", lang), show_alert=True)
 
 from aiogram.filters import StateFilter
 
@@ -516,7 +517,7 @@ async def handle_media_download(message: types.Message, bot: Bot):
         url_cache[url_hash] = url
         
         await message.answer(
-            f"{icon} *{platform} havolasi qabul qilindi!*\nSifat yoki formatni tanlang:",
+            get_text("ask_quality_title", lang, icon=icon, platform=platform),
             reply_markup=get_quality_selector_keyboard(url, is_premium=is_premium, lang=lang, user_msg_id=message.message_id),
             parse_mode="Markdown"
         )
@@ -549,7 +550,8 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
 
     url = url_cache.get(url_hash)
     if not url:
-        await callback.answer("❌ Havola muddati o'tdi. Iltimos, havolani qayta yuboring.", show_alert=True)
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("link_expired_alert", lang), show_alert=True)
         return
 
     platform, icon, _ = detect_platform_and_url(url)
@@ -571,7 +573,8 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
     user = await get_or_create_user(message.from_user.id)
     is_vip = user['is_premium']
 
-    status_msg = await message.answer(f"{icon} *{platform}* havolasi ishlanmoqda...")
+    lang = user.get('language', 'uz')
+    status_msg = await message.answer(get_text("processing_link", lang, icon=icon, platform=platform), parse_mode="Markdown")
     loop = asyncio.get_event_loop()
     
     last_update_time = [loop.time()]
@@ -586,7 +589,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             if current_time - last_update_time[0] > 3:
                 last_update_time[0] = current_time
                 try:
-                    text = f"⏳ *{platform}* yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}"
+                    text = get_text("downloading_progress", lang, platform=platform, p=p, speed=speed, eta=eta)
                     asyncio.run_coroutine_threadsafe(status_msg.edit_text(text, parse_mode="Markdown"), loop)
                 except Exception:
                     pass
@@ -597,7 +600,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
     async with download_semaphore:
         try:
             os.makedirs("downloads", exist_ok=True)
-            await status_msg.edit_text(f"⏳ *{platform}* dan yuklab olinmoqda...")
+            await status_msg.edit_text(get_text("downloading_start", lang, platform=platform), parse_mode="Markdown")
             
             file_path, video_info = await loop.run_in_executor(None, download_media, url, quality, progress_hook)
             title = video_info.get("title", f"{platform} Video")
@@ -605,7 +608,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             bot_info = await bot_inst.get_me()
 
             if quality == 'mp3' or file_path.endswith(".mp3"):
-                await status_msg.edit_text("🎵 MP3 audio fayl tayyorlanmoqda...")
+                await status_msg.edit_text(get_text("mp3_preparing", lang), parse_mode="Markdown")
                 mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
                 
                 audio = FSInputFile(mp3_file)
@@ -626,10 +629,10 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
                 
                 if not is_local_api and file_size_mb > 49.0:
-                    await status_msg.edit_text("⚡️ Video 50 MB dan katta. Telegram uchun sifatli siqilmoqda...")
+                    await status_msg.edit_text(get_text("compressing_video", lang), parse_mode="Markdown")
                     file_path = await loop.run_in_executor(None, compress_video_to_target_size, file_path, 48.0)
 
-                await status_msg.edit_text("✅ Tayyor! Telegram'ga yuborilmoqda...")
+                await status_msg.edit_text(get_text("sending_telegram", lang), parse_mode="Markdown")
                 
                 width, height, duration = await loop.run_in_executor(None, get_video_metadata, file_path)
                 if not width or not height:
@@ -644,10 +647,11 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 video = FSInputFile(file_path)
                 thumbnail = FSInputFile(thumb_result) if thumb_result else None
 
-                res_str = f" | 🎬 *Sifat:* {height}p" if height else ""
+                res_str = get_text("quality_str_part", lang, height=height) if height else ""
+                caption_text = get_text("video_caption", lang, icon=icon, title=title, size=file_size_mb, res_str=res_str, username=bot_info.username)
                 await message.answer_video(
                     video,
-                    caption=f"{icon} *{title}*\n💾 *Hajm:* {file_size_mb:.1f} MB{res_str}\n\n🤖 @{bot_info.username}",
+                    caption=caption_text,
                     width=width,
                     height=height,
                     duration=int(duration) if duration else None,
@@ -667,7 +671,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
 
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
-            await status_msg.edit_text(f"❌ Yuklab olishda xatolik yuz berdi: {str(e)}")
+            await status_msg.edit_text(get_text("download_error", lang, error=str(e)))
 
 @dp.callback_query(F.data == "ref_info")
 async def cb_ref_info(callback: types.CallbackQuery, bot: Bot):
@@ -721,22 +725,16 @@ async def successful_payment_handler(message: types.Message):
     elif payload == "prem_90_days":
         days = 90
     await grant_premium(user_id, days)
+    lang = await get_user_language(user_id)
     await message.answer(
-        f"🎉 *Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.*\n\n"
-        f"Sizga *{days} kunlik ⭐ Premium* obuna taqdim etildi!\n"
-        "Endi cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning. 🚀",
+        get_text("successful_payment_notice", lang, days=days),
         parse_mode="Markdown"
     )
 
 @dp.callback_query(F.data == "buy_prem_card")
 async def cb_buy_card(callback: types.CallbackQuery):
-    text = (
-        "💳 *Karta orqali to'lov (Click / Payme / Uzcard / Humo)*\n\n"
-        "⭐ 1 oy Premium narxi: *15,000 so'm*\n"
-        "💳 Karta raqam: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n"
-        "📝 *To'lovni tasdiqlash uchun:* To'lovni amalga oshirgach, to'lov cheki rasmini (skrinshotini) darhol shu yerga yuboring! "
-        "Adminlarimiz chekni tekshirib, bir necha daqiqada sizga Premium tarifni yoqib berishadi."
-    )
+    lang = await get_user_language(callback.from_user.id)
+    text = get_text("card_payment_info", lang)
     await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
 
@@ -750,7 +748,8 @@ async def handle_photo_receipt(message: types.Message, bot: Bot):
         await message.answer("⚠️ Hozircha adminlar tayinlanmagan.")
         return
 
-    await message.answer("✅ To'lov chekingiz adminlarga yuborildi! Tekshirib tez orada Premium tarifni aktivlashtiramiz. Rahmat! 😊")
+    lang = await get_user_language(user_id)
+    await message.answer(get_text("receipt_received_user", lang))
 
     caption = (
         "💳 *Yangi to'lov cheki (Karta / Click)*\n\n"
@@ -789,11 +788,10 @@ async def cb_verify_prem(callback: types.CallbackQuery, bot: Bot):
     await callback.answer("✅ Premium berildi!")
     
     try:
+        target_lang = await get_user_language(target_user_id)
         await bot.send_message(
             target_user_id,
-            f"🎉 *Tabriklaymiz! To'lov chekingiz admin tomonidan tasdiqlandi!*\n\n"
-            f"Sizga *{days} kunlik ⭐ Premium* obuna yoqildi!\n"
-            "Endi cheksiz va super sifatli yuklashdan rohatlaning. 🚀",
+            get_text("receipt_verified_notice", target_lang, days=days),
             parse_mode="Markdown"
         )
     except Exception as e:
@@ -814,10 +812,10 @@ async def cb_reject_prem(callback: types.CallbackQuery, bot: Bot):
     await callback.answer("❌ Rad etildi!")
     
     try:
+        target_lang = await get_user_language(target_user_id)
         await bot.send_message(
             target_user_id,
-            "❌ *To'lov chekingiz tasdiqlanmadi.*\n\n"
-            "Iltimos, to'g'ri chek yuborganingizga ishonch hosil qiling yoki savollar bo'yicha adminga murojaat qiling.",
+            get_text("receipt_rejected_notice", target_lang),
             parse_mode="Markdown"
         )
     except Exception as e:

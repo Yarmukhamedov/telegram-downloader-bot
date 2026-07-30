@@ -499,6 +499,95 @@ MESSAGES = {
         "uz": "❌ *Bugungi kunlik bepul yuklash limitingiz tugadi!*\n\n⚡️ Limitni kengaytirish yoki cheksiz yuklash uchun *🛍 Do'kon* dan Premium oling yoki do'stlaringizni taklif qiling!",
         "ru": "❌ *Ваш дневной бесплатный лимит скачиваний исчерпан!*\n\n⚡️ Для снятия лимитов приобретите Premium в *🛍 Магазине* или приглашайте друзей!",
         "en": "❌ *Your daily free download limit is exhausted!*\n\n⚡️ To get unlimited downloads, get Premium in the *🛍 Shop* or invite friends!"
+    },
+
+    # Media & Downloads
+    "processing_link": {
+        "uz": "{icon} *{platform}* havolasi ishlanmoqda...",
+        "ru": "{icon} Ссылка *{platform}* обрабатывается...",
+        "en": "{icon} Processing *{platform}* link..."
+    },
+    "downloading_progress": {
+        "uz": "⏳ *{platform}* yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}",
+        "ru": "⏳ Скачивание *{platform}*: {p}\n🚀 Скорость: {speed}\n⏱ Ожидание: {eta}",
+        "en": "⏳ Downloading *{platform}*: {p}\n🚀 Speed: {speed}\n⏱ ETA: {eta}"
+    },
+    "downloading_start": {
+        "uz": "⏳ *{platform}* dan yuklab olinmoqda...",
+        "ru": "⏳ Загрузка с *{platform}*...",
+        "en": "⏳ Downloading from *{platform}*..."
+    },
+    "mp3_preparing": {
+        "uz": "🎵 MP3 audio fayl tayyorlanmoqda...",
+        "ru": "🎵 Подготовка MP3 аудио файла...",
+        "en": "🎵 Preparing MP3 audio file..."
+    },
+    "compressing_video": {
+        "uz": "⚡️ Video 50 MB dan katta. Telegram uchun sifatli siqilmoqda...",
+        "ru": "⚡️ Видео больше 50 МБ. Сжимается для Telegram...",
+        "en": "⚡️ Video exceeds 50 MB. Compressing for Telegram..."
+    },
+    "sending_telegram": {
+        "uz": "✅ Tayyor! Telegram'ga yuborilmoqda...",
+        "ru": "✅ Готово! Отправляется в Telegram...",
+        "en": "✅ Ready! Sending to Telegram..."
+    },
+    "download_error": {
+        "uz": "❌ Yuklab olishda xatolik yuz berdi: {error}",
+        "ru": "❌ Произошла ошибка при скачивании: {error}",
+        "en": "❌ Error downloading video: {error}"
+    },
+    "not_subscribed_alert": {
+        "uz": "❌ Siz hali kanalga obuna bo'lmadingiz!",
+        "ru": "❌ Вы еще не подписались на канал!",
+        "en": "❌ You have not subscribed to the channel yet!"
+    },
+    "link_expired_alert": {
+        "uz": "❌ Havola muddati o'tdi. Iltimos, havolani qayta yuboring.",
+        "ru": "❌ Ссылка устарела. Пожалуйста, отправьте ссылку заново.",
+        "en": "❌ Link expired. Please send the link again."
+    },
+    "video_caption": {
+        "uz": "{icon} *{title}*\n💾 *Hajm:* {size:.1f} MB{res_str}\n\n🤖 @{username}",
+        "ru": "{icon} *{title}*\n💾 *Размер:* {size:.1f} МБ{res_str}\n\n🤖 @{username}",
+        "en": "{icon} *{title}*\n💾 *Size:* {size:.1f} MB{res_str}\n\n🤖 @{username}"
+    },
+    "quality_str_part": {
+        "uz": " | 🎬 *Sifat:* {height}p",
+        "ru": " | 🎬 *Качество:* {height}p",
+        "en": " | 🎬 *Quality:* {height}p"
+    },
+    "ask_quality_title": {
+        "uz": "{icon} *{platform} havolasi qabul qilindi!*\nSifat yoki formatni tanlang:",
+        "ru": "{icon} *Ссылка {platform} получена!*\nВыберите качество или формат:",
+        "en": "{icon} *{platform} link received!*\nSelect quality or format:"
+    },
+
+    # Payments & Receipts
+    "successful_payment_notice": {
+        "uz": "🎉 *Tabriklaymiz! To'lov muvaffaqiyatli qabul qilindi.*\n\nSizga *{days} kunlik ⭐ Premium* obuna taqdim etildi!\nEndi cheksiz, navbatsiz va super sifatli yuklashdan rohatlaning. 🚀",
+        "ru": "🎉 *Поздравляем! Оплата успешно принята.*\n\nВам начислена подписка *⭐ Premium на {days} дней*!\nНаслаждайтесь безлимитными скачиваниями на максимальной скорости. 🚀",
+        "en": "🎉 *Congratulations! Payment successfully received.*\n\nYou have been granted *⭐ Premium for {days} days*!\nEnjoy unlimited, high-speed downloads without waiting. 🚀"
+    },
+    "card_payment_info": {
+        "uz": "💳 *Karta orqali to'lov (Click / Payme / Uzcard / Humo)*\n\n⭐ 1 oy Premium narxi: *15,000 so'm*\n💳 Karta raqam: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n📝 *To'lovni tasdiqlash uchun:* To'lovni amalga oshirgach, to'lov cheki rasmini (skrinshotini) darhol shu yerga yuboring! Adminlarimiz chekni tekshirib, bir necha daqiqada sizga Premium tarifni yoqib berishadi.",
+        "ru": "💳 *Оплата картой (Click / Payme / Uzcard / Humo)*\n\n⭐ Цена 1 месяца Premium: *15,000 сум*\n💳 Номер карты: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n📝 *Для подтверждения:* После оплаты отправьте скриншот чека прямо сюда! Администрация проверит чек и активирует Premium в течение нескольких минут.",
+        "en": "💳 *Card Payment (Click / Payme / Uzcard / Humo)*\n\n⭐ 1 Month Premium price: *15,000 UZS*\n💳 Card Number: `8600 0000 0000 0000` *(Palonchiyev P.)*\n\n📝 *To confirm:* After payment, send a screenshot of the receipt right here! Admins will verify it and activate Premium within a few minutes."
+    },
+    "receipt_received_user": {
+        "uz": "✅ To'lov chekingiz adminlarga yuborildi! Tekshirib tez orada Premium tarifni aktivlashtiramiz. Rahmat! 😊",
+        "ru": "✅ Ваш чек отправлен администраторам! После проверки активируем Premium. Спасибо! 😊",
+        "en": "✅ Your receipt has been sent to admins! We will activate your Premium after verification. Thank you! 😊"
+    },
+    "receipt_verified_notice": {
+        "uz": "🎉 *Tabriklaymiz! To'lov chekingiz admin tomonidan tasdiqlandi!*\n\nSizga *{days} kunlik ⭐ Premium* obuna yoqildi!\nEndi cheksiz va super sifatli yuklashdan rohatlaning. 🚀",
+        "ru": "🎉 *Поздравляем! Ваш чек оплаты подтвержден администратором!*\n\nВам активирована подписка *⭐ Premium на {days} дней*!\nНаслаждайтесь безлимитными и высокоскоростными скачиваниями. 🚀",
+        "en": "🎉 *Congratulations! Your payment receipt has been verified by admin!*\n\nYou have been granted *⭐ Premium for {days} days*!\nEnjoy unlimited and high-speed downloads now. 🚀"
+    },
+    "receipt_rejected_notice": {
+        "uz": "❌ *To'lov chekingiz tasdiqlanmadi.*\n\nIltimos, to'g'ri chek yuborganingizga ishonch hosil qiling yoki savollar bo'yicha adminga murojaat qiling.",
+        "ru": "❌ *Ваш чек оплаты не подтвержден.*\n\nПожалуйста, убедитесь в правильности чека или обратитесь к администратору.",
+        "en": "❌ *Your payment receipt was not verified.*\n\nPlease make sure you uploaded a valid receipt or contact support."
     }
 }
 
