@@ -23,7 +23,7 @@ from database import (
     check_daily_limit, get_setting, get_admin_stats, register_user_with_referral,
     get_user_referrals, grant_premium, get_user_coins, add_user_coins,
     get_user_language, set_user_language, get_referral_stats, verify_referral_activity,
-    create_redeem_code, redeem_code, get_user_total_downloads
+    create_redeem_code, redeem_code, get_user_total_downloads, claim_daily_bonus
 )
 from downloader import (
     detect_platform_and_url, download_media, get_video_metadata,
@@ -372,6 +372,17 @@ async def cmd_use_coins_menu(message: types.Message):
     text = get_text("use_coins_text", lang, coins=coins)
     await message.answer(text, reply_markup=get_use_coins_keyboard(lang, message.message_id), parse_mode="Markdown")
 
+@dp.message(Command("daily"))
+@dp.message(F.text.in_(get_all_button_texts("btn_daily_bonus")))
+async def cmd_daily_bonus(message: types.Message):
+    user_id = message.from_user.id
+    lang = await get_user_language(user_id)
+    success, code, coins = await claim_daily_bonus(user_id, bonus_amount=10)
+    if success:
+        await message.answer(get_text("daily_bonus_claimed", lang, coins=coins), parse_mode="Markdown")
+    else:
+        await message.answer(get_text("daily_bonus_already", lang, coins=coins), parse_mode="Markdown")
+
 @dp.callback_query(F.data.startswith("buy_shop:"))
 async def cb_buy_shop(callback: types.CallbackQuery):
     parts = callback.data.split(":")
@@ -491,11 +502,12 @@ async def handle_media_download(message: types.Message, bot: Bot):
 
     platform, icon, url = detect_platform_and_url(message.text)
     if not url:
-        lang = await get_user_language(message.from_user.id)
-        msg = "ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!" if lang == 'uz' else (
-            "ℹ️ Пожалуйста, отправьте мне ссылку на YouTube, TikTok, Instagram, Pinterest или Twitter!" if lang == 'ru' else
-            "ℹ️ Please send me a link from YouTube, TikTok, Instagram, Pinterest, or Twitter!")
-        await message.answer(msg)
+        if message.chat.type == 'private':
+            lang = await get_user_language(message.from_user.id)
+            msg = "ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!" if lang == 'uz' else (
+                "ℹ️ Пожалуйста, отправьте мне ссылку на YouTube, TikTok, Instagram, Pinterest или Twitter!" if lang == 'ru' else
+                "ℹ️ Please send me a link from YouTube, TikTok, Instagram, Pinterest, or Twitter!")
+            await message.answer(msg)
         return
 
     can_download, current_usage = await check_daily_limit(message.from_user.id, free_limit=15)

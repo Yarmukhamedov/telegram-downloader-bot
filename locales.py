@@ -57,6 +57,16 @@ MESSAGES = {
         "ru": "📢 Канал подписки",
         "en": "📢 Force Sub Channel"
     },
+    "btn_admin_export": {
+        "uz": "📥 Foydalanuvchilar (CSV)",
+        "ru": "📥 Пользователи (CSV)",
+        "en": "📥 Export Users (CSV)"
+    },
+    "btn_daily_bonus": {
+        "uz": "🎁 Kunlik Bonus (+10 Coin)",
+        "ru": "🎁 Ежедневный бонус (+10)",
+        "en": "🎁 Daily Bonus (+10 Coins)"
+    },
     "btn_invite_center": {
         "uz": "👥 Takliflar markazi",
         "ru": "👥 Приглашения",
@@ -500,6 +510,16 @@ MESSAGES = {
         "ru": "❌ *Ваш дневной бесплатный лимит скачиваний исчерпан!*\n\n⚡️ Для снятия лимитов приобретите Premium в *🛍 Магазине* или приглашайте друзей!",
         "en": "❌ *Your daily free download limit is exhausted!*\n\n⚡️ To get unlimited downloads, get Premium in the *🛍 Shop* or invite friends!"
     },
+    "daily_bonus_claimed": {
+        "uz": "🎉 *Kunlik mukofot qabul qilindi!*\n\nSizga *+10 🪙 Coin* taqdim etildi!\n💰 Joriy balansingiz: *{coins} 🪙 Coin*",
+        "ru": "🎉 *Ежедневный бонус получен!*\n\nВам начислено *+10 🪙 Монет*!\n💰 Ваш баланс: *{coins} 🪙 Монет*",
+        "en": "🎉 *Daily bonus claimed!*\n\nYou received *+10 🪙 Coins*!\n💰 Current balance: *{coins} 🪙 Coins*"
+    },
+    "daily_bonus_already": {
+        "uz": "⏳ *Bugungi kunlik mukofotni allaqachon olgansiz!*\n\nYangi mukofotni ertaga qayta olishingiz mumkin. 😊",
+        "ru": "⏳ *Вы уже получили сегодняшний бонус!*\n\nВозвращайтесь завтра за новым бонусом. 😊",
+        "en": "⏳ *You have already claimed today's bonus!*\n\nCome back tomorrow for your next bonus. 😊"
+    },
 
     # Media & Downloads
     "processing_link": {
@@ -641,7 +661,9 @@ LEGACY_BUTTONS = {
     "btn_admin_give_prem": ["🎁 Premium hadya etish", "🎁 Подарить Premium", "🎁 Grant Premium"],
     "btn_admin_give_coin": ["🪙 Coin Ulashishi", "🪙 Пополнить монеты", "🪙 Grant Coins"],
     "btn_admin_promos": ["🎟 Promokodlar", "🎟 Промокоды", "🎟 Promo Codes"],
-    "btn_admin_channel": ["📢 Majburiy obuna kanali", "📢 Канал подписки", "📢 Force Sub Channel"]
+    "btn_admin_channel": ["📢 Majburiy obuna kanali", "📢 Канал подписки", "📢 Force Sub Channel"],
+    "btn_admin_export": ["📥 Foydalanuvchilar (CSV)", "📥 Экспорт пользователей (CSV)", "📥 Export Users (CSV)"],
+    "btn_daily_bonus": ["🎁 Kunlik Bonus (+10 Coin)", "🎁 Ежедневный бонус (+10)", "🎁 Daily Bonus (+10 Coins)", "🎁 Kunlik Bonus", "🎁 Ежедневный бонус", "🎁 Daily Bonus"]
 }
 
 def get_all_button_texts(key: str) -> list[str]:

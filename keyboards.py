@@ -42,7 +42,10 @@ def get_admin_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_admin_promos", lang)),
             KeyboardButton(text=get_text("btn_admin_channel", lang))
         ],
-        [KeyboardButton(text=get_text("btn_main_menu", lang))]
+        [
+            KeyboardButton(text=get_text("btn_admin_export", lang)),
+            KeyboardButton(text=get_text("btn_main_menu", lang))
+        ]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
@@ -201,12 +204,16 @@ def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     t_prem = get_text("btn_buy_prem_menu", lang)
     t_coins = get_text("btn_use_coins", lang)
     t_redeem = get_text("btn_redeem_code", lang)
+    t_bonus = get_text("btn_daily_bonus", lang)
     
     buttons = [
         [
             KeyboardButton(text=t_prem),
             KeyboardButton(text=t_redeem),
             KeyboardButton(text=t_coins)
+        ],
+        [
+            KeyboardButton(text=t_bonus)
         ],
         [
             KeyboardButton(text=get_text("btn_back", lang)),

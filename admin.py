@@ -5,8 +5,9 @@ from aiogram import Router, Bot, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import FSInputFile
 
-from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting, create_redeem_code, get_user_language
+from database import get_admin_stats, get_all_user_ids, grant_premium, set_setting, get_setting, create_redeem_code, get_user_language, export_users_csv
 from keyboards import get_admin_keyboard, get_admin_reply_keyboard
 from locales import get_all_button_texts
 
@@ -14,13 +15,11 @@ logger = logging.getLogger(__name__)
 admin_router = Router()
 
 def get_admin_ids() -> list[int]:
-    admin_env = os.getenv("ADMIN_IDS", "")
-    ids = []
-    for item in admin_env.split(","):
-        item = item.strip()
-        if item.isdigit():
-            ids.append(int(item))
-    return ids
+    raw = os.getenv("ADMIN_IDS", "795496563")
+    try:
+        return [int(x.strip()) for x in raw.split(",") if x.strip().isdigit()]
+    except Exception:
+        return [795496563]
 
 class AdminStates(StatesGroup):
     waiting_for_broadcast = State()
@@ -29,7 +28,7 @@ class AdminStates(StatesGroup):
     waiting_for_give_amount = State()
 
 @admin_router.message(Command("admin"))
-@admin_router.message(F.text.in_(["🛠 Admin Panel", "🛠 Админ панель"]))
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin")))
 async def cmd_admin_panel(message: types.Message):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
@@ -38,16 +37,8 @@ async def cmd_admin_panel(message: types.Message):
 
     try:
         lang = await get_user_language(message.from_user.id)
-        stats = await get_admin_stats()
         text = (
-            "👨‍💻 *Admin Boshqaruv Paneli*\n\n"
-            f"👥 *Jami foydalanuvchilar:* {stats['total_users']} ta\n"
-            f"⭐ *Premium foydalanuvchilar:* {stats['premium_users']} ta\n"
-            f"⚡️ *Bugun faol:* {stats['active_today']} ta\n\n"
-            f"📊 *Jami yuklab olishlar:* {stats['total_downloads']} ta\n"
-            f"📥 *Bugungi yuklashlar:* {stats['downloads_today']} ta\n\n"
-            f"🪙 *Jami Coinlar (bazada):* {stats.get('total_coins', 0)} 🪙\n"
-            f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta\n\n"
+            "🛠 *ADMIN PANEL*\n\n"
             "👇 *Quyidagi tugmalar orqali botni boshqarishingiz mumkin:*"
         )
         await message.answer(text, reply_markup=get_admin_reply_keyboard(lang), parse_mode="Markdown")
@@ -62,17 +53,42 @@ async def cmd_admin_stats(message: types.Message):
         return
 
     stats = await get_admin_stats()
+    platform_text = ""
+    p_stats = stats.get('platform_stats', {})
+    if p_stats:
+        platform_text = "\n\n🌐 *Ijtimoiy Tarmoqlar Ulushi:*\n"
+        for p_name, p_cnt in p_stats.items():
+            platform_text += f"• *{p_name}:* {p_cnt} ta yuklash\n"
+
     text = (
-        "📊 *Bot Statistikasi*\n\n"
+        "📊 *Kengaytirilgan Bot Statistikasi*\n\n"
         f"👥 *Jami foydalanuvchilar:* {stats['total_users']} ta\n"
         f"⭐ *Premium foydalanuvchilar:* {stats['premium_users']} ta\n"
         f"⚡️ *Bugun faol:* {stats['active_today']} ta\n\n"
         f"📊 *Jami yuklab olishlar:* {stats['total_downloads']} ta\n"
         f"📥 *Bugungi yuklashlar:* {stats['downloads_today']} ta\n\n"
         f"🪙 *Jami Coinlar (bazada):* {stats.get('total_coins', 0)} 🪙\n"
-        f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta\n"
+        f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta"
+        f"{platform_text}"
     )
     await message.answer(text, parse_mode="Markdown")
+
+@admin_router.message(Command("export_users"))
+@admin_router.message(F.text.in_(get_all_button_texts("btn_admin_export")))
+async def cmd_admin_export(message: types.Message):
+    admin_ids = get_admin_ids()
+    if message.from_user.id not in admin_ids:
+        return
+
+    status_msg = await message.answer("⏳ Foydalanuvchilar bazasi CSV faylga eksport qilinmoqda...")
+    try:
+        csv_file_path = await export_users_csv()
+        doc = FSInputFile(csv_file_path)
+        await message.answer_document(doc, caption="📥 *Barcha foydalanuvchilar ma'lumotlari eksport qilindi (CSV formatda).*")
+        await status_msg.delete()
+    except Exception as e:
+        logger.error(f"Error exporting users CSV: {e}")
+        await status_msg.edit_text(f"❌ Eksport qilishda xatolik: {e}")
 
 @admin_router.message(F.text.in_(get_all_button_texts("btn_admin_broadcast")))
 async def cmd_admin_broadcast(message: types.Message, state: FSMContext):

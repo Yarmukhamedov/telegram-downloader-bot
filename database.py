@@ -66,6 +66,10 @@ async def init_db():
             await db.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'uz'")
         except Exception:
             pass
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN last_daily_bonus TEXT DEFAULT NULL")
+        except Exception:
+            pass
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS referrals (
@@ -307,19 +311,15 @@ async def get_admin_stats() -> dict:
                     if row: downloads_today = row[0]
             except Exception as e:
                 logger.warning(f"Stats error downloads_today: {e}")
-            total_coins, total_referrals = 0, 0
+            platform_stats = {}
             try:
-                async with db.execute("SELECT SUM(coins) FROM users") as c:
-                    row = await c.fetchone()
-                    if row and row[0]: total_coins = row[0]
+                async with db.execute("SELECT platform, COUNT(*) FROM downloads_history GROUP BY platform ORDER BY COUNT(*) DESC") as c:
+                    rows = await c.fetchall()
+                    for r in rows:
+                        if r[0]: platform_stats[r[0]] = r[1]
             except Exception as e:
-                logger.warning(f"Stats error total_coins: {e}")
-            try:
-                async with db.execute("SELECT COUNT(*) FROM referrals") as c:
-                    row = await c.fetchone()
-                    if row: total_referrals = row[0]
-            except Exception as e:
-                logger.warning(f"Stats error total_referrals: {e}")
+                logger.warning(f"Stats error platform_stats: {e}")
+
     except Exception as e:
         logger.error(f"Error connecting for stats: {e}")
 
@@ -330,8 +330,64 @@ async def get_admin_stats() -> dict:
         "total_downloads": total_downloads,
         "downloads_today": downloads_today,
         "total_coins": total_coins,
-        "total_referrals": total_referrals
+        "total_referrals": total_referrals,
+        "platform_stats": platform_stats
     }
+
+async def claim_daily_bonus(user_id: int, bonus_amount: int = 10) -> tuple[bool, str, int]:
+    """
+    Returns (success, message_code, total_coins)
+    message_code: 'SUCCESS', 'ALREADY_CLAIMED', 'USER_NOT_FOUND'
+    """
+    today_str = date.today().isoformat()
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT coins, last_daily_bonus FROM users WHERE user_id = ?", (user_id,)) as cur:
+            user = await cur.fetchone()
+        if not user:
+            return False, "USER_NOT_FOUND", 0
+        
+        last_bonus = user['last_daily_bonus']
+        if last_bonus == today_str:
+            return False, "ALREADY_CLAIMED", user['coins'] or 0
+        
+        new_coins = (user['coins'] or 0) + bonus_amount
+        await db.execute("UPDATE users SET coins = ?, last_daily_bonus = ? WHERE user_id = ?", (new_coins, today_str, user_id))
+        await db.commit()
+        return True, "SUCCESS", new_coins
+
+async def export_users_csv() -> str:
+    """Exports all users into a CSV file and returns the file path"""
+    os.makedirs("exports", exist_ok=True)
+    filename = f"exports/users_export_{date.today().isoformat()}.csv"
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("""
+            SELECT user_id, username, full_name, language, is_premium, premium_until, coins, daily_downloads, joined_at 
+            FROM users 
+            ORDER BY id ASC
+        """) as cur:
+            rows = await cur.fetchall()
+
+    import csv
+    with open(filename, mode="w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(["User ID", "Username", "Full Name", "Language", "Is Premium", "Premium Until", "Coins", "Today Downloads", "Joined At"])
+        for r in rows:
+            writer.writerow([
+                r['user_id'],
+                r['username'] or "",
+                r['full_name'] or "",
+                r['language'] or "uz",
+                "Yes" if r['is_premium'] else "No",
+                r['premium_until'] or "",
+                r['coins'] or 0,
+                r['daily_downloads'] or 0,
+                r['joined_at'] or ""
+            ])
+            
+    return filename
 
 async def get_all_user_ids() -> list[int]:
     async with aiosqlite.connect(DB_PATH) as db:
