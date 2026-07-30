@@ -477,12 +477,21 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
         lang = await get_user_language(callback.from_user.id)
         await callback.answer(get_text("not_subscribed_alert", lang), show_alert=True)
 
-from aiogram.filters import StateFilter
+@dp.message(F.text, ~F.text.startswith("/"))
+async def handle_media_download(message: types.Message, bot: Bot, state: FSMContext):
+    registered_buttons = get_all_registered_buttons()
+    if message.text in registered_buttons:
+        return
 
-IGNORED_BUTTONS = get_all_registered_buttons()
+    current_state = await state.get_state()
+    platform, icon, url = detect_platform_and_url(message.text)
 
-@dp.message(StateFilter(None), F.text, ~F.text.startswith("/"), ~F.text.in_(IGNORED_BUTTONS))
-async def handle_media_download(message: types.Message, bot: Bot):
+    if url:
+        if current_state is not None:
+            await state.clear()
+    elif current_state is not None:
+        return
+
     logger.info(f">>> Text message received from user_id: {message.from_user.id}: {message.text}")
 
     if message.text.startswith("/redeem"):
