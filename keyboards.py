@@ -66,6 +66,7 @@ def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_invite_stats", lang))
         ],
         [
+            KeyboardButton(text=get_text("btn_back", lang)),
             KeyboardButton(text=get_text("btn_main_menu", lang))
         ]
     ]
@@ -197,6 +198,7 @@ def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=t_coins)
         ],
         [
+            KeyboardButton(text=get_text("btn_back", lang)),
             KeyboardButton(text=get_text("btn_main_menu", lang))
         ]
     ]
