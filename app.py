@@ -192,17 +192,22 @@ async def cb_set_quality(callback: types.CallbackQuery):
     lang = await get_user_language(callback.from_user.id)
     q_map = {'best': "1080p / 4K", '720p': "720p HD", '480p': "480p SD", 'mp3': "MP3 Audio", 'ask': "❓ Ask"}
     q_str = q_map.get(quality, quality)
-    msg_text = f"✅ Video yuklash sifati o'zgartirildi: {q_str}" if lang == 'uz' else (
-        f"✅ Качество загрузки изменено на: {q_str}" if lang == 'ru' else
-        f"✅ Download quality set to: {q_str}"
+    msg_text = f"✅ Video yuklash sifati sozlangan: *{q_str}*" if lang == 'uz' else (
+        f"✅ Качество загрузки видео установлено на: *{q_str}*" if lang == 'ru' else
+        f"✅ Video download quality set to: *{q_str}*"
     )
-    await callback.answer(msg_text, show_alert=True)
+    await callback.message.answer(msg_text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
+    await callback.answer()
 
 @dp.callback_query(F.data.startswith("close_quality:"))
 async def cb_close_quality(callback: types.CallbackQuery):
     parts = callback.data.split(":")
     user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
     await delete_menu_and_user_msg(callback, user_msg_id)
+    is_admin = callback.from_user.id in get_admin_ids()
+    lang = await get_user_language(callback.from_user.id)
+    text = get_text("back_main_menu", lang)
+    await callback.message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
     await callback.answer()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_profile")))
