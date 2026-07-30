@@ -504,9 +504,9 @@ async def handle_media_download(message: types.Message, bot: Bot):
     if not url:
         if message.chat.type == 'private':
             lang = await get_user_language(message.from_user.id)
-            msg = "ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Pinterest yoki Twitter havolasini yuboring!" if lang == 'uz' else (
-                "ℹ️ Пожалуйста, отправьте мне ссылку на YouTube, TikTok, Instagram, Pinterest или Twitter!" if lang == 'ru' else
-                "ℹ️ Please send me a link from YouTube, TikTok, Instagram, Pinterest, or Twitter!")
+            msg = "ℹ️ Iltimos, menga YouTube, TikTok, Instagram, Threads, Pinterest yoki Twitter havolasini yuboring!" if lang == 'uz' else (
+                "ℹ️ Пожалуйста, отправьте мне ссылку на YouTube, TikTok, Instagram, Threads, Pinterest или Twitter!" if lang == 'ru' else
+                "ℹ️ Please send me a link from YouTube, TikTok, Instagram, Threads, Pinterest, or Twitter!")
             await message.answer(msg)
         return
 

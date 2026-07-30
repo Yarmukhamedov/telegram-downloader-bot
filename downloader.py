@@ -38,6 +38,8 @@ def detect_platform_and_url(text: str) -> tuple[str, str, str]:
         return "TikTok", "🎵", url
     elif "instagram.com" in url:
         return "Instagram", "📸", url
+    elif "threads.net" in url or "threads.com" in url:
+        return "Threads", "🧵", url
     elif "pinterest.com" in url or "pin.it" in url:
         return "Pinterest", "📌", url
     elif "twitter.com" in url or "x.com" in url:
