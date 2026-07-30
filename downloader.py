@@ -363,7 +363,88 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 
     raise Exception("Cobalt API fallback failed")
 
+def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
+    """Custom high-speed media downloader for Threads.net / Threads.com posts"""
+    logger.info(f"🧵 Attempting custom Threads downloader for: {url}")
+    import urllib.request
+    
+    # 1. Resolve redirect if share URL or threads.com
+    if "/share/" in url or "threads.com" in url:
+        try:
+            req_init = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            with urllib.request.urlopen(req_init) as resp:
+                url = resp.geturl()
+        except Exception as e:
+            logger.warning(f"Threads redirect resolve warning: {e}")
+            
+    url = url.replace("threads.com", "threads.net")
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Site': 'same-origin'
+    }
+
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        html = resp.read().decode('utf-8', errors='ignore')
+
+    def clean(s):
+        return s.replace(chr(92) + '/', '/').replace(chr(92) + 'u0026', '&')
+
+    v_url = None
+    matches = re.findall(r'\"video_versions\":\[(.*?)\]', html)
+    if matches:
+        for m in matches:
+            urls = re.findall(r'\"url\":\"([^\"]+)\"', m)
+            if urls:
+                v_url = clean(urls[0])
+                break
+
+    if not v_url:
+        mp4s = re.findall(r'\"(https://[^\"]+?\.mp4[^\"]*?)\"', html)
+        if mp4s:
+            v_url = clean(mp4s[0])
+
+    if not v_url:
+        raise Exception("Threads video URL not found in post HTML")
+
+    titles = re.findall(r'<title>(.*?)</title>', html)
+    title = titles[0].replace(" - Threads", "").replace("Threads", "").strip() if titles else "Threads Video"
+
+    os.makedirs("downloads", exist_ok=True)
+    out_file = f"downloads/threads_{abs(hash(url))}.mp4"
+    
+    if progress_fn:
+        try:
+            progress_fn({'status': 'downloading', '_percent_str': ' 50.0%', '_speed_str': 'Fast', '_eta_str': '00:01'})
+        except Exception:
+            pass
+
+    v_req = urllib.request.Request(v_url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(v_req) as v_resp:
+        data = v_resp.read()
+        with open(out_file, 'wb') as f:
+            f.write(data)
+
+    if progress_fn:
+        try:
+            progress_fn({'status': 'finished'})
+        except Exception:
+            pass
+
+    logger.info(f"🚀 ✅ Threads media downloaded successfully to {out_file}")
+    return out_file, {"title": title, "width": 1080, "height": 1080, "duration": 30}
+
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
+    if "threads.com" in url or "threads.net" in url:
+        try:
+            return download_threads_media(url, progress_fn=progress_fn)
+        except Exception as err:
+            logger.warning(f"Custom Threads downloader failed ({err}). Falling back to yt-dlp...")
+            url = url.replace("threads.com", "threads.net")
+
     is_youtube = "youtube.com" in url or "youtu.be" in url
 
     # Download strategy requested by user for Beta:
