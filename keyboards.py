@@ -54,7 +54,6 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_shop_redeem", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_back", lang)),
             KeyboardButton(text=get_text("btn_main_menu", lang))
         ]
     ]
@@ -67,7 +66,6 @@ def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_invite_stats", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_back", lang)),
             KeyboardButton(text=get_text("btn_main_menu", lang))
         ]
     ]
@@ -188,15 +186,19 @@ def get_invite_center_keyboard(ref_link: str, lang: str = "uz") -> InlineKeyboar
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
-    t_prem = "👑 Buy Premium"
-    t_coins = "🪙 Use Coins"
-    t_redeem = "🎟 Promokod kiritish (Redeem Code)" if lang == 'uz' else ("🎟 Ввести промокод (Redeem Code)" if lang == 'ru' else "🎟 Enter Redeem Code")
-    t_back = "⬅️ Orqaga" if lang == 'uz' else ("⬅️ Назад" if lang == 'ru' else "⬅️ Back")
+    t_prem = get_text("btn_buy_prem_menu", lang)
+    t_coins = get_text("btn_use_coins", lang)
+    t_redeem = get_text("btn_redeem_code", lang)
     
     buttons = [
-        [KeyboardButton(text=t_prem), KeyboardButton(text=t_coins)],
-        [KeyboardButton(text=t_redeem)],
-        [KeyboardButton(text=t_back), KeyboardButton(text=get_text("btn_main_menu", lang))]
+        [
+            KeyboardButton(text=t_prem),
+            KeyboardButton(text=t_redeem),
+            KeyboardButton(text=t_coins)
+        ],
+        [
+            KeyboardButton(text=get_text("btn_main_menu", lang))
+        ]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
