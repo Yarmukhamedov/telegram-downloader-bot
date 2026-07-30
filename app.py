@@ -154,7 +154,7 @@ async def cmd_quality_settings(message: types.Message):
     is_admin = message.from_user.id in get_admin_ids()
     is_premium = user['is_premium'] or is_admin
     quality = user['preferred_quality']
-    if quality == 'best' and not is_premium:
+    if quality in ['best', '2k', '1080p'] and not is_premium:
         quality = '720p'
     lang = user.get('language', 'uz')
     
@@ -173,12 +173,12 @@ async def cb_set_quality(callback: types.CallbackQuery):
     user = await get_or_create_user(callback.from_user.id)
     is_admin = callback.from_user.id in get_admin_ids()
     is_premium = user['is_premium'] or is_admin
-    if quality == 'best' and not is_premium:
+    if quality in ['best', '2k', '1080p'] and not is_premium:
         lang = await get_user_language(callback.from_user.id)
         alert_msg = (
-            "🔒 1080p Full HD va 4K Ultra HD yuklab olish faqat Premium foydalanuvchilar uchun mavjud!\n\n🛍 Quyidagi menyudan Premium obunani xarid qilib, cheksiz yuklash va eng yuqori sifatni oching!" if lang == 'uz' else (
-            "🔒 Загрузка в 1080p Full HD и 4K Ultra HD доступна только для Premium пользователей!\n\n🛍 Оформите Premium ниже для безлимита и максимального качества!" if lang == 'ru' else
-            "🔒 1080p Full HD and 4K Ultra HD downloading is available exclusively for Premium users!\n\n🛍 Upgrade to Premium below for unlimited downloads and highest quality!")
+            "🔒 1080p, 2K va 4K Ultra HD yuklab olish faqat Premium foydalanuvchilar uchun mavjud!\n\n🛍 Quyidagi menyudan Premium obunani xarid qilib, cheksiz yuklash va yuqori sifatlarni oching!" if lang == 'uz' else (
+            "🔒 Загрузка в 1080p, 2K и 4K Ultra HD доступна только для Premium пользователей!\n\n🛍 Оформите Premium ниже для безлимита и максимального качества!" if lang == 'ru' else
+            "🔒 Downloading in 1080p, 2K, and 4K Ultra HD is available exclusively for Premium users!\n\n🛍 Upgrade to Premium below for unlimited downloads and high qualities!")
         )
         await callback.answer(alert_msg, show_alert=True)
         await delete_menu_and_user_msg(callback, user_msg_id)
@@ -190,7 +190,7 @@ async def cb_set_quality(callback: types.CallbackQuery):
     await delete_menu_and_user_msg(callback, user_msg_id)
 
     lang = await get_user_language(callback.from_user.id)
-    q_map = {'best': "1080p / 4K", '720p': "720p HD", '480p': "480p SD", 'mp3': "MP3 Audio", 'ask': "❓ Ask"}
+    q_map = {'best': "4K Ultra HD", '2k': "2K (1440p)", '1080p': "1080p Full HD", '720p': "720p HD", '480p': "480p SD", 'mp3': "MP3 Audio", 'ask': "❓ Ask"}
     q_str = q_map.get(quality, quality)
     msg_text = f"✅ Video yuklash sifati sozlangan: *{q_str}*" if lang == 'uz' else (
         f"✅ Качество загрузки видео установлено на: *{q_str}*" if lang == 'ru' else
@@ -508,7 +508,7 @@ async def handle_media_download(message: types.Message, bot: Bot):
     is_admin = message.from_user.id in get_admin_ids()
     is_premium = user['is_premium'] or is_admin
     pref_quality = user['preferred_quality']
-    if pref_quality == 'best' and not is_premium:
+    if pref_quality in ['best', '2k', '1080p'] and not is_premium:
         pref_quality = '720p'
 
     if pref_quality == 'ask':
@@ -535,12 +535,12 @@ async def cb_download_quality(callback: types.CallbackQuery, bot: Bot):
     user = await get_or_create_user(callback.from_user.id)
     is_admin = callback.from_user.id in get_admin_ids()
     is_premium = user['is_premium'] or is_admin
-    if quality == 'best' and not is_premium:
+    if quality in ['best', '2k', '1080p'] and not is_premium:
         lang = await get_user_language(callback.from_user.id)
         alert_msg = (
-            "🔒 1080p Full HD va 4K Ultra HD yuklab olish faqat Premium foydalanuvchilar uchun mavjud!\n\n🛍 Quyidagi menyudan Premium obunani xarid qilib, cheksiz yuklash va eng yuqori sifatni oching!" if lang == 'uz' else (
-            "🔒 Загрузка в 1080p Full HD и 4K Ultra HD доступна только для Premium пользователей!\n\n🛍 Оформите Premium ниже для безлимита и максимального качества!" if lang == 'ru' else
-            "🔒 1080p Full HD and 4K Ultra HD downloading is available exclusively for Premium users!\n\n🛍 Upgrade to Premium below for unlimited downloads and highest quality!")
+            "🔒 1080p, 2K va 4K Ultra HD yuklab olish faqat Premium foydalanuvchilar uchun mavjud!\n\n🛍 Quyidagi menyudan Premium obunani xarid qilib, cheksiz yuklash va yuqori sifatlarni oching!" if lang == 'uz' else (
+            "🔒 Загрузка в 1080p, 2K и 4K Ultra HD доступна только для Premium пользователей!\n\n🛍 Оформите Premium ниже для безлимита и максимального качества!" if lang == 'ru' else
+            "🔒 Downloading in 1080p, 2K, and 4K Ultra HD is available exclusively for Premium users!\n\n🛍 Upgrade to Premium below for unlimited downloads and high qualities!")
         )
         await callback.answer(alert_msg, show_alert=True)
         await delete_menu_and_user_msg(callback, user_msg_id)

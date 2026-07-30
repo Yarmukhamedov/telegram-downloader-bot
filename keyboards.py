@@ -84,7 +84,9 @@ def get_language_keyboard(user_msg_id: int = 0) -> InlineKeyboardMarkup:
 
 def get_settings_keyboard(current_quality: str = '720p', lang: str = "uz", user_msg_id: int = 0, is_premium: bool = False) -> InlineKeyboardMarkup:
     q_map = {
-        'best': "🎬 Eng yuqori (1080p / 4K)" if lang == 'uz' else ("🎬 Максимальное (1080p / 4K)" if lang == 'ru' else "🎬 Highest (1080p / 4K)"),
+        'best': "🎬 Eng yuqori (4K Ultra HD)" if lang == 'uz' else ("🎬 Максимальное (4K Ultra HD)" if lang == 'ru' else "🎬 Highest (4K Ultra HD)"),
+        '2k': "💎 Ultra HD (2K 1440p)" if lang == 'uz' else ("💎 Ultra HD (2K 1440p)" if lang == 'ru' else "💎 Ultra HD (2K 1440p)"),
+        '1080p': "🎥 Full HD (1080p)" if lang == 'uz' else ("🎥 Full HD (1080p)" if lang == 'ru' else "🎥 Full HD (1080p)"),
         '720p': "📺 O'rtacha HD (720p)" if lang == 'uz' else ("📺 Среднее HD (720p)" if lang == 'ru' else "📺 Medium HD (720p)"),
         '480p': "📱 Tejamkor (480p)" if lang == 'uz' else ("📱 Экономное (480p)" if lang == 'ru' else "📱 Data Saver (480p)"),
         'mp3': "🎵 Faqat MP3 Audio" if lang == 'uz' else ("🎵 Только MP3 Аудио" if lang == 'ru' else "🎵 MP3 Audio Only"),
@@ -93,8 +95,8 @@ def get_settings_keyboard(current_quality: str = '720p', lang: str = "uz", user_
 
     buttons = []
     for q_key, q_label in q_map.items():
-        if q_key == 'best' and not is_premium:
-            label = "🔒 Eng yuqori (1080p / 4K) ⭐️" if lang == 'uz' else ("🔒 Максимальное (1080p / 4K) ⭐️" if lang == 'ru' else "🔒 Highest (1080p / 4K) ⭐️")
+        if q_key in ['best', '2k', '1080p'] and not is_premium:
+            label = f"🔒 {q_label} ⭐️"
         else:
             prefix = "✅ " if current_quality == q_key else ""
             label = f"{prefix}{q_label}"
@@ -116,16 +118,25 @@ def get_force_sub_keyboard(channel_link: str, lang: str = "uz") -> InlineKeyboar
 def get_quality_selector_keyboard(video_url: str, is_premium: bool = False, lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
     url_hash = hashlib.md5(video_url.encode()).hexdigest()[:10]
     if is_premium:
-        best_str = "🎬 Eng yuqori (1080p / 4K)" if lang == 'uz' else ("🎬 Максимальное (1080p / 4K)" if lang == 'ru' else "🎬 Highest (1080p / 4K)")
+        best_str = "🎬 4K Ultra HD"
+        k2_str = "💎 2K (1440p)"
+        fhd_str = "🎥 1080p Full HD"
     else:
-        best_str = "🔒 Eng yuqori (1080p / 4K) ⭐️" if lang == 'uz' else ("🔒 Максимальное (1080p / 4K) ⭐️" if lang == 'ru' else "🔒 Highest (1080p / 4K) ⭐️")
-    hd_str = "📺 O'rtacha HD (720p)" if lang == 'uz' else ("📺 Среднее HD (720p)" if lang == 'ru' else "📺 Medium HD (720p)")
-    sd_str = "📱 Tejamkor (480p)" if lang == 'uz' else ("📱 Экономное (480p)" if lang == 'ru' else "📱 Data Saver (480p)")
-    mp3_str = "🎵 Faqat MP3 Audio" if lang == 'uz' else ("🎵 Только MP3 Аудио" if lang == 'ru' else "🎵 MP3 Audio Only")
+        best_str = "🔒 4K Ultra HD ⭐️"
+        k2_str = "🔒 2K (1440p) ⭐️"
+        fhd_str = "🔒 1080p Full HD ⭐️"
+    
+    hd_str = "📺 720p HD"
+    sd_str = "📱 480p SD"
+    mp3_str = "🎵 MP3 Audio"
 
     buttons = [
         [
             InlineKeyboardButton(text=best_str, callback_data=f"download_q:{url_hash}:best:{user_msg_id}"),
+            InlineKeyboardButton(text=k2_str, callback_data=f"download_q:{url_hash}:2k:{user_msg_id}")
+        ],
+        [
+            InlineKeyboardButton(text=fhd_str, callback_data=f"download_q:{url_hash}:1080p:{user_msg_id}"),
             InlineKeyboardButton(text=hd_str, callback_data=f"download_q:{url_hash}:720p:{user_msg_id}")
         ],
         [

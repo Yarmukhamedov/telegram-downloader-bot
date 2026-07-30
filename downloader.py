@@ -73,10 +73,26 @@ def get_base_ydl_opts(quality: str = 'best', use_cookies: bool = True, player_cl
             "/best[height<=480]"
             "/best"
         )
+    elif quality == '1080p':
+        format_spec = (
+            "bestvideo[height<=1080]+bestaudio"
+            "/bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]"
+            "/best[height<=1080][ext=mp4]"
+            "/best[height<=1080]"
+            "/best"
+        )
+    elif quality in ['2k', '1440p']:
+        format_spec = (
+            "bestvideo[height<=1440]+bestaudio"
+            "/bestvideo[height<=1440][ext=mp4]+bestaudio[ext=m4a]"
+            "/best[height<=1440][ext=mp4]"
+            "/best[height<=1440]"
+            "/best"
+        )
     elif quality == 'mp3':
         format_spec = "bestaudio[ext=m4a]/bestaudio/best"
     else:
-        # Best quality — prioritize resolution (1080p/4K VP9/AV1/H264) over container extension
+        # Best quality — prioritize highest resolution (4K/8K/VP9/AV1/H264)
         format_spec = (
             "bestvideo+bestaudio"
             "/bestvideo[ext=mp4]+bestaudio[ext=m4a]"
@@ -315,7 +331,7 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
-    vq = "1080" if quality == "best" else ("720" if quality == "720p" else "480")
+    vq = "1440" if quality in ["2k", "1440p"] else ("1080" if quality in ["best", "1080p"] else ("720" if quality == "720p" else "480"))
     payload = {
         "url": url,
         "videoQuality": vq,
