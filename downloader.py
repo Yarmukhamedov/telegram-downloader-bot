@@ -422,29 +422,39 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
 
     import html as html_lib
 
-    title = "Threads Media"
-    og_desc = re.findall(r'<meta[^>]+property=[\"\']og:description[\"\'][^>]+content=[\"\']([^\"\']+)[\"\']', html, re.IGNORECASE)
-    if not og_desc:
-        og_desc = re.findall(r'<meta[^>]+name=[\"\']twitter:description[\"\'][^>]+content=[\"\']([^\"\']+)[\"\']', html, re.IGNORECASE)
-        
-    if og_desc:
-        t = html_lib.unescape(og_desc[0]).strip()
-        if t and t.lower() != 'home':
+    title = ""
+    GENERIC_FALLBACKS = ["join threads", "log in", "home", "threads • log in", "log in with your instagram", "see photos and videos"]
+
+    # 1. Try extracting caption from JSON payload
+    captions = re.findall(r'\"caption\":\{\"text\":\"([^\"]+)\"', html)
+    if not captions:
+        captions = re.findall(r'\"text\":\"([^\"]+)\"', html)
+
+    for c in captions:
+        t = c.replace(r'\n', ' ').replace(r'\"', '"')
+        t = html_lib.unescape(t).strip()
+        if t and not any(bad in t.lower() for bad in GENERIC_FALLBACKS):
             title = t
-    else:
-        captions = re.findall(r'\"caption\":\{\"text\":\"([^\"]+)\"', html)
-        if captions:
-            t = captions[0].replace(r'\n', ' ').replace(r'\"', '"')
-            t = html_lib.unescape(t).strip()
-            if t and t.lower() != 'home':
+            break
+
+    # 2. If no valid caption in JSON, try OpenGraph description
+    if not title:
+        og_desc = re.findall(r'<meta[^>]+property=[\"\']og:description[\"\'][^>]+content=[\"\']([^\"\']+)[\"\']', html, re.IGNORECASE)
+        if not og_desc:
+            og_desc = re.findall(r'<meta[^>]+name=[\"\']twitter:description[\"\'][^>]+content=[\"\']([^\"\']+)[\"\']', html, re.IGNORECASE)
+        
+        if og_desc:
+            t = html_lib.unescape(og_desc[0]).strip()
+            if t and not any(bad in t.lower() for bad in GENERIC_FALLBACKS):
                 title = t
+
+    # 3. Fallback to post author username if caption is missing/generic
+    if not title:
+        user_match = re.search(r'/@([A-Za-z0-9_.-]+)', url)
+        if user_match:
+            title = f"Threads Post by @{user_match.group(1)}"
         else:
-            og_title = re.findall(r'<meta[^>]+property=[\"\']og:title[\"\'][^>]+content=[\"\']([^\"\']+)[\"\']', html, re.IGNORECASE)
-            if og_title:
-                t = html_lib.unescape(og_title[0]).strip()
-                t = re.sub(r'\s+on Threads$', '', t, flags=re.IGNORECASE)
-                if t and t.lower() != 'home':
-                    title = t
+            title = "Threads Post"
 
     os.makedirs("downloads", exist_ok=True)
     ext = ".mp4" if is_video else ".jpg"
