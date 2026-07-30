@@ -606,7 +606,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 current_time = loop.time()
                 if current_time - last_update_time[0] >= 1.0:
                     last_update_time[0] = current_time
-                    text = get_text("sending_telegram", lang)
+                    text = get_text("step_converting", lang)
                     asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
         except Exception as err:
             logger.warning(f"Error in progress_hook: {err}")
@@ -628,6 +628,9 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 await status_msg.edit_text(get_text("mp3_preparing", lang), parse_mode="Markdown")
                 mp3_file = await loop.run_in_executor(None, convert_to_mp3, file_path)
                 
+                audio_size_mb = os.path.getsize(mp3_file) / (1024 * 1024) if os.path.exists(mp3_file) else 0.0
+                await status_msg.edit_text(get_text("step_uploading", lang, size=audio_size_mb), parse_mode="Markdown")
+                
                 audio = FSInputFile(mp3_file)
                 await message.answer_audio(
                     audio,
@@ -640,6 +643,7 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                     os.remove(mp3_file)
 
             else:
+                await status_msg.edit_text(get_text("step_converting", lang), parse_mode="Markdown")
                 file_path = await loop.run_in_executor(None, ensure_h264_codec, file_path)
                 
                 is_local_api = getattr(bot_inst, "_is_local_api", False) or (hasattr(bot_inst.session, "api") and bot_inst.session.api.is_local)

@@ -503,34 +503,49 @@ MESSAGES = {
 
     # Media & Downloads
     "processing_link": {
-        "uz": "{icon} *{platform}* havolasi ishlanmoqda...",
-        "ru": "{icon} Ссылка *{platform}* обрабатывается...",
-        "en": "{icon} Processing *{platform}* link..."
+        "uz": "⏳ {icon} *{platform}* havolasi ishlanmoqda...",
+        "ru": "⏳ {icon} Ссылка *{platform}* обрабатывается...",
+        "en": "⏳ {icon} Processing *{platform}* link..."
+    },
+    "step_downloading": {
+        "uz": "📥 *[1/3] Serverga yuklanmoqda:* `{p}`\n🚀 *Tezlik:* `{speed}`\n⏱ *Qolgan vaqt:* `{eta}`",
+        "ru": "📥 *[1/3] Загрузка на сервер:* `{p}`\n🚀 *Скорость:* `{speed}`\n⏱ *Осталось:* `{eta}`",
+        "en": "📥 *[1/3] Downloading to server:* `{p}`\n🚀 *Speed:* `{speed}`\n⏱ *ETA:* `{eta}`"
+    },
+    "step_converting": {
+        "uz": "⚙️ *[2/3] Format va video qayta ishlanmoqda...*\n_(Video va audio sifatli birlashtirilmoqda)_",
+        "ru": "⚙️ *[2/3] Обработка и конвертация видео...*\n_(Сведение видео и аудио в высоком качестве)_",
+        "en": "⚙️ *[2/3] Processing & converting media...*\n_(Merging video and audio in high quality)_"
+    },
+    "step_uploading": {
+        "uz": "📤 *[3/3] Telegram'ga yuklanmoqda...*\n_(Fayl hajmi: {size:.1f} MB)_",
+        "ru": "📤 *[3/3] Отправка в Telegram...*\n_(Размер файла: {size:.1f} МБ)_",
+        "en": "📤 *[3/3] Uploading to Telegram...*\n_(File size: {size:.1f} MB)_"
     },
     "downloading_progress": {
-        "uz": "⏳ *{platform}* yuklanmoqda: {p}\n🚀 Tezlik: {speed}\n⏱ Qolgan vaqt: {eta}",
-        "ru": "⏳ Скачивание *{platform}*: {p}\n🚀 Скорость: {speed}\n⏱ Ожидание: {eta}",
-        "en": "⏳ Downloading *{platform}*: {p}\n🚀 Speed: {speed}\n⏱ ETA: {eta}"
+        "uz": "📥 *[1/3] Serverga yuklanmoqda:* `{p}`\n🚀 *Tezlik:* `{speed}`\n⏱ *Qolgan vaqt:* `{eta}`",
+        "ru": "📥 *[1/3] Загрузка на сервер:* `{p}`\n🚀 *Скорость:* `{speed}`\n⏱ *Осталось:* `{eta}`",
+        "en": "📥 *[1/3] Downloading to server:* `{p}`\n🚀 *Speed:* `{speed}`\n⏱ *ETA:* `{eta}`"
     },
     "downloading_start": {
-        "uz": "⏳ *{platform}* dan yuklab olinmoqda...",
-        "ru": "⏳ Загрузка с *{platform}*...",
-        "en": "⏳ Downloading from *{platform}*..."
+        "uz": "📥 *[1/3] {platform}* dan yuklab olinmoqda...",
+        "ru": "📥 *[1/3] Загрузка с {platform}*...",
+        "en": "📥 *[1/3] Downloading from {platform}*..."
     },
     "mp3_preparing": {
-        "uz": "🎵 MP3 audio fayl tayyorlanmoqda...",
-        "ru": "🎵 Подготовка MP3 аудио файла...",
-        "en": "🎵 Preparing MP3 audio file..."
+        "uz": "⚙️ *[2/3] MP3 audio aylantirilmoqda...*",
+        "ru": "⚙️ *[2/3] Конвертация в MP3 аудио...*",
+        "en": "⚙️ *[2/3] Converting to MP3 audio...*"
     },
     "compressing_video": {
-        "uz": "⚡️ Video 50 MB dan katta. Telegram uchun sifatli siqilmoqda...",
-        "ru": "⚡️ Видео больше 50 МБ. Сжимается для Telegram...",
-        "en": "⚡️ Video exceeds 50 MB. Compressing for Telegram..."
+        "uz": "⚙️ *[2/3] Video Telegram uchun siqilmoqda (50 MB+)...*",
+        "ru": "⚙️ *[2/3] Сжатие видео для Telegram (50 МБ+)...*",
+        "en": "⚙️ *[2/3] Compressing video for Telegram (50 MB+)...*"
     },
     "sending_telegram": {
-        "uz": "✅ Tayyor! Telegram'ga yuborilmoqda...",
-        "ru": "✅ Готово! Отправляется в Telegram...",
-        "en": "✅ Ready! Sending to Telegram..."
+        "uz": "📤 *[3/3] Telegram'ga yuborilmoqda...*",
+        "ru": "📤 *[3/3] Отправка в Telegram...*",
+        "en": "📤 *[3/3] Uploading to Telegram...*"
     },
     "download_error": {
         "uz": "❌ Yuklab olishda xatolik yuz berdi: {error}",
