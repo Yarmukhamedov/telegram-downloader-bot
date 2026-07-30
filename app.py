@@ -581,12 +581,12 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
 
     def progress_hook(d):
         if d['status'] == 'downloading':
-            p = d.get('_percent_str', '0%')
-            speed = d.get('_speed_str', 'N/A')
-            eta = d.get('_eta_str', 'N/A')
+            p = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_percent_str', '0%'))).strip()
+            speed = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_speed_str', 'N/A'))).strip()
+            eta = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_eta_str', 'N/A'))).strip()
             
             current_time = loop.time()
-            if current_time - last_update_time[0] > 3:
+            if current_time - last_update_time[0] >= 2.5:
                 last_update_time[0] = current_time
                 try:
                     text = get_text("downloading_progress", lang, platform=platform, p=p, speed=speed, eta=eta)
