@@ -388,8 +388,12 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
                                     height = f.get("height")
                                     break
                         if 0 < height < 1080:
-                            logger.warning(f"⚠️ Stage 1 max resolution is only {height}p (< 1080p). Escalating to Stage 2 for Full HD/4K...")
-                            continue
+                            has_higher = any((f.get("height", 0) or 0) >= 1080 for f in info_preview.get("formats", []))
+                            if has_higher:
+                                logger.warning(f"⚠️ Stage 1 max resolution is only {height}p (< 1080p). Escalating to Stage 2 for Full HD/4K...")
+                                continue
+                            else:
+                                logger.info(f"ℹ️ Stage 1 resolution is {height}p (no 1080p+ formats available for this video). Proceeding with Stage 1 download...")
                     except Exception as prev_err:
                         logger.warning(f"Preview check failed: {prev_err}. Proceeding with Stage 1 download...")
 
