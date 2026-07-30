@@ -49,9 +49,7 @@ def get_admin_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
 def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
-            KeyboardButton(text=get_text("btn_balance", lang))
-        ],
-        [
+            KeyboardButton(text=get_text("btn_balance", lang)),
             KeyboardButton(text=get_text("btn_invite_center", lang)),
             KeyboardButton(text=get_text("btn_shop_redeem", lang))
         ],
