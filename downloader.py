@@ -368,27 +368,31 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
     logger.info(f"🧵 Attempting custom Threads downloader for: {url} (Quality: {quality})")
     import urllib.request
     import http.cookiejar
-    
-    # 1. Resolve redirect if share URL or threads.com
-    if "/share/" in url or "threads.com" in url:
-        try:
-            req_init = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-            with urllib.request.urlopen(req_init) as resp:
-                url = resp.geturl()
-        except Exception as e:
-            logger.warning(f"Threads redirect resolve warning: {e}")
-            
-    url = url.replace("threads.com", "threads.net")
 
-    # Load cookies if cookies.txt exists for restricted/18+ content
+    # Load cookies first for authenticated share redirects & restricted 18+ content
     opener = None
-    if os.path.exists(COOKIES_PATH):
+    if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
         try:
             cj = http.cookiejar.MozillaCookieJar(COOKIES_PATH)
             cj.load(ignore_discard=True, ignore_expires=True)
             opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         except Exception as cookie_err:
             logger.warning(f"Could not load cookies.txt for Threads: {cookie_err}")
+
+    # 1. Resolve redirect if share URL or threads.com
+    if "/share/" in url or "threads.com" in url:
+        try:
+            req_init = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            if opener:
+                with opener.open(req_init) as resp:
+                    url = resp.geturl()
+            else:
+                with urllib.request.urlopen(req_init) as resp:
+                    url = resp.geturl()
+        except Exception as e:
+            logger.warning(f"Threads redirect resolve warning: {e}")
+            
+    url = url.replace("threads.com", "threads.net")
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
