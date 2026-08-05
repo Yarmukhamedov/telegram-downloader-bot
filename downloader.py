@@ -620,7 +620,7 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
         logger.info("📸 Attempting Instagram photo/post fallback extraction...")
         try:
             photo_opts = {
-                "skip_download": True,
+                "extract_flat": True,
                 "no_check_certificates": True,
                 "http_headers": {
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -629,8 +629,13 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
             if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
                 photo_opts["cookiefile"] = COOKIES_PATH
 
+            info_p = None
             with yt_dlp.YoutubeDL(photo_opts) as ydl_photo:
-                info_p = ydl_photo.extract_info(url, download=False)
+                try:
+                    info_p = ydl_photo.extract_info(url, download=False)
+                except Exception as ex_err:
+                    info_p = getattr(ex_err, "info_dict", None)
+
                 if info_p:
                     img_url = info_p.get("thumbnail") or info_p.get("url")
                     if not img_url and info_p.get("thumbnails"):
