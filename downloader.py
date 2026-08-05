@@ -616,7 +616,8 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
         try:
             return download_threads_media(url, quality=quality, progress_fn=progress_fn)
         except Exception as err:
-            logger.warning(f"Custom Threads downloader failed ({err}). Falling back to yt-dlp...")
+            logger.warning(f"Custom Threads downloader failed: {err}")
+            raise Exception(f"Threads post media unavailable or link expired ({err})")
 
     if "instagram.com" in url:
         try:
@@ -741,5 +742,8 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
         except Exception as cob_err:
             logger.error(f"Cobalt fallback failed: {cob_err}")
 
-    raise last_exception
+    if last_exception:
+        raise last_exception
+    else:
+        raise Exception("Media download failed: Unable to extract media from provided link")
 
