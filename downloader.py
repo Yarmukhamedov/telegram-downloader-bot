@@ -532,16 +532,93 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         if h: height = h
         if d: duration = d
 
-    logger.info(f"🚀 ✅ Threads media ({'Video ' + quality if is_video else 'Photo'}) downloaded successfully to {out_file}")
-    return out_file, {"title": title, "width": width, "height": height, "duration": duration, "is_photo": not is_video}
+def download_instagram_media(url: str, quality: str = 'best', progress_fn=None) -> tuple[str, dict]:
+    """Custom high-speed media downloader for Instagram posts, reels, and photos"""
+    logger.info(f"📸 Attempting custom Instagram downloader for: {url}")
+    import urllib.request
+    import urllib.parse
+    import http.cookiejar
+
+    shortcode_match = re.search(r'/(?:p|reel|reels)/([A-Za-z0-9_-]+)', url)
+    if not shortcode_match:
+        raise Exception("Invalid Instagram post URL")
+    shortcode = shortcode_match.group(1)
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+        'X-IG-App-ID': '936619743392459',
+        'Accept': '*/*',
+        'Sec-Fetch-Site': 'same-origin'
+    }
+
+    opener = None
+    if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+        try:
+            cj = http.cookiejar.MozillaCookieJar(COOKIES_PATH)
+            cj.load(ignore_discard=True, ignore_expires=True)
+            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        except Exception as e:
+            logger.warning(f"Cookies load warning for Instagram: {e}")
+
+    # Query Instagram GraphQL doc_ids
+    doc_ids = ['10015901848480474', '17991233853477142', '8833687760075322']
+    var = json.dumps({'shortcode': shortcode})
+
+    media_data = None
+    for did in doc_ids:
+        gql_url = f"https://www.instagram.com/graphql/query/?doc_id={did}&variables={urllib.parse.quote(var)}"
+        req = urllib.request.Request(gql_url, headers=headers)
+        try:
+            if opener:
+                resp = opener.open(req)
+            else:
+                resp = urllib.request.urlopen(req)
+            data = json.loads(resp.read().decode('utf-8', errors='ignore'))
+            xdt = data.get('data', {}).get('xdt_shortcode_media') or data.get('data', {}).get('shortcode_media')
+            if xdt:
+                media_data = xdt
+                break
+        except Exception as err:
+            logger.warning(f"Instagram GQL doc_id {did} warning: {err}")
+
+    if media_data:
+        is_video = media_data.get('is_video', False)
+        media_url = media_data.get('video_url') if is_video else media_data.get('display_url')
+        caption = "Instagram Post"
+        try:
+            caption = media_data.get('edge_media_to_caption', {}).get('edges', [{}])[0].get('node', {}).get('text') or caption
+        except Exception:
+            pass
+
+        if media_url:
+            os.makedirs("downloads", exist_ok=True)
+            ext = ".mp4" if is_video else ".jpg"
+            out_file = f"downloads/ig_{abs(hash(url))}{ext}"
+            
+            v_req = urllib.request.Request(media_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(v_req) as v_resp:
+                img_bytes = v_resp.read()
+                with open(out_file, "wb") as f:
+                    f.write(img_bytes)
+            logger.info(f"🚀 ✅ Instagram custom downloader successfully saved to {out_file}")
+            return out_file, {"title": caption[:100], "is_photo": not is_video}
+
+    raise Exception("Instagram custom downloader found no media URL")
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
-    if "threads.com" in url or "threads.net" in url:
+    url = url.replace("threads.com", "threads.net")
+
+    if "threads.net" in url:
         try:
             return download_threads_media(url, quality=quality, progress_fn=progress_fn)
         except Exception as err:
             logger.warning(f"Custom Threads downloader failed ({err}). Falling back to yt-dlp...")
-            url = url.replace("threads.com", "threads.net")
+
+    if "instagram.com" in url:
+        try:
+            return download_instagram_media(url, quality=quality, progress_fn=progress_fn)
+        except Exception as err:
+            logger.warning(f"Custom Instagram downloader failed ({err}). Falling back to yt-dlp...")
 
     is_youtube = "youtube.com" in url or "youtu.be" in url
     is_instagram = "instagram.com" in url
