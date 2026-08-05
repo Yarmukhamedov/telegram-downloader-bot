@@ -544,16 +544,21 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
             url = url.replace("threads.com", "threads.net")
 
     is_youtube = "youtube.com" in url or "youtu.be" in url
+    is_instagram = "instagram.com" in url
 
     # Download strategy requested by user for Beta:
     # Stage 1: web+cookies (official). If resolution < 1080p on 'best', try Stage 2.
     # Stage 2: PO Token & Advanced clients (web_creator, tv_embedded) for Full HD/4K.
     # Stage 3: Fallback back to web+cookies if Stage 2 fails.
+    # Stage 4: no-cookies fallback for Instagram (if cookies file is stale/missing CSRF token).
     stages = [
         {"clients": ["web", "mweb"], "use_cookies": True, "label": "Stage 1 [web+cookies (official)]", "check_hd": True},
         {"clients": ["web_creator", "tv_embedded", "web_safari", "web", "mweb"], "use_cookies": True, "label": "Stage 2 [PO Token & Advanced Clients (Full HD/4K)]", "check_hd": False},
         {"clients": ["web", "mweb"], "use_cookies": True, "label": "Stage 3 [web+cookies fallback]", "check_hd": False}
     ]
+
+    if is_instagram:
+        stages.append({"clients": ["web", "mweb"], "use_cookies": False, "label": "Stage 4 [no-cookies Instagram fallback]", "check_hd": False})
 
     last_exception = None
     for idx, stage in enumerate(stages, start=1):
@@ -610,7 +615,40 @@ def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]
             logger.warning(f"{stage['label']} failed: {e}")
             last_exception = e
 
-    # Stage 4: Cobalt API fallback for YouTube
+    # Stage 5: Instagram Photo & Post Fallback Extractor
+    if is_instagram:
+        logger.info("📸 Attempting Instagram photo/post fallback extraction...")
+        try:
+            photo_opts = {
+                "skip_download": True,
+                "no_check_certificates": True,
+                "http_headers": {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                }
+            }
+            if os.path.exists(COOKIES_PATH) and os.path.getsize(COOKIES_PATH) > 0:
+                photo_opts["cookiefile"] = COOKIES_PATH
+
+            with yt_dlp.YoutubeDL(photo_opts) as ydl_photo:
+                info_p = ydl_photo.extract_info(url, download=False)
+                if info_p:
+                    img_url = info_p.get("thumbnail") or info_p.get("url")
+                    if not img_url and info_p.get("thumbnails"):
+                        img_url = info_p["thumbnails"][-1].get("url")
+                    if img_url:
+                        os.makedirs("downloads", exist_ok=True)
+                        out_photo = f"downloads/ig_{abs(hash(url))}.jpg"
+                        r_img = requests.get(img_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+                        if r_img.status_code == 200:
+                            with open(out_photo, "wb") as f:
+                                f.write(r_img.content)
+                            title = info_p.get("title") or "Instagram Photo"
+                            logger.info(f"✅ Instagram photo downloaded successfully: {out_photo}")
+                            return out_photo, {"title": title, "is_photo": True}
+        except Exception as photo_err:
+            logger.warning(f"Instagram photo fallback error: {photo_err}")
+
+    # Stage 6: Cobalt API fallback for YouTube
     if is_youtube:
         try:
             return download_via_cobalt_fallback(url, quality)
