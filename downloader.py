@@ -363,9 +363,9 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 
     raise Exception("Cobalt API fallback failed")
 
-def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
-    """Custom high-speed media downloader for Threads.net / Threads.com posts (supports 18+ & restricted content via cookies)"""
-    logger.info(f"🧵 Attempting custom Threads downloader for: {url}")
+def download_threads_media(url: str, quality: str = 'best', progress_fn=None) -> tuple[str, dict]:
+    """Custom high-speed media downloader for Threads.net / Threads.com posts (supports 18+ & restricted content via cookies and quality selection)"""
+    logger.info(f"🧵 Attempting custom Threads downloader for: {url} (Quality: {quality})")
     import urllib.request
     import http.cookiejar
     
@@ -408,14 +408,24 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
     def clean(s):
         return s.replace(chr(92) + '/', '/').replace(chr(92) + 'u0026', '&')
 
-    v_url = None
+    v_urls = []
     matches = re.findall(r'\"video_versions\":\[(.*?)\]', html)
     if matches:
         for m in matches:
             urls = re.findall(r'\"url\":\"([^\"]+)\"', m)
-            if urls:
-                v_url = clean(urls[0])
-                break
+            for u in urls:
+                cu = clean(u)
+                if cu not in v_urls:
+                    v_urls.append(cu)
+
+    v_url = None
+    if v_urls:
+        if quality in ['720p'] and len(v_urls) > 1:
+            v_url = v_urls[1]
+        elif quality in ['480p'] and len(v_urls) > 2:
+            v_url = v_urls[-1]
+        else:
+            v_url = v_urls[0]
 
     if not v_url:
         mp4s = re.findall(r'\"(https://[^\"]+?\.mp4[^\"]*?)\"', html)
@@ -493,13 +503,42 @@ def download_threads_media(url: str, progress_fn=None) -> tuple[str, dict]:
         except Exception:
             pass
 
-    logger.info(f"🚀 ✅ Threads media ({'Video' if is_video else 'Photo'}) downloaded successfully to {out_file}")
-    return out_file, {"title": title, "width": 1080, "height": 1080, "duration": 30, "is_photo": not is_video}
+    width, height, duration = 1080, 1080, 30
+    if is_video:
+        # Scale to requested quality if 720p or 480p requested
+        if quality in ['720p', '480p']:
+            target_h = 720 if quality == '720p' else 480
+            w, h, d = get_video_metadata(out_file)
+            if h and h > target_h:
+                scaled_file = f"downloads/threads_{abs(hash(url))}_{quality}.mp4"
+                ffmpeg = get_ffmpeg_path()
+                cmd = [
+                    ffmpeg, "-y", "-i", out_file,
+                    "-vf", f"scale=-2:{target_h}",
+                    "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+                    "-c:a", "copy", scaled_file
+                ]
+                try:
+                    subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                    if os.path.exists(scaled_file):
+                        os.remove(out_file)
+                        out_file = scaled_file
+                        logger.info(f"⚡️ Threads video scaled to exact {quality} ({target_h}p)")
+                except Exception as scale_err:
+                    logger.warning(f"Threads quality scaling warning: {scale_err}")
+
+        w, h, d = get_video_metadata(out_file)
+        if w: width = w
+        if h: height = h
+        if d: duration = d
+
+    logger.info(f"🚀 ✅ Threads media ({'Video ' + quality if is_video else 'Photo'}) downloaded successfully to {out_file}")
+    return out_file, {"title": title, "width": width, "height": height, "duration": duration, "is_photo": not is_video}
 
 def download_media(url: str, quality: str, progress_fn=None) -> tuple[str, dict]:
     if "threads.com" in url or "threads.net" in url:
         try:
-            return download_threads_media(url, progress_fn=progress_fn)
+            return download_threads_media(url, quality=quality, progress_fn=progress_fn)
         except Exception as err:
             logger.warning(f"Custom Threads downloader failed ({err}). Falling back to yt-dlp...")
             url = url.replace("threads.com", "threads.net")
