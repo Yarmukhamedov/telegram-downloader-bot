@@ -9,6 +9,7 @@ def get_main_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboard
             KeyboardButton(text=get_text("btn_settings", lang))
         ],
         [
+            KeyboardButton(text=get_text("btn_shop_redeem", lang)),
             KeyboardButton(text=get_text("btn_help", lang))
         ]
     ]
@@ -55,6 +56,9 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=get_text("btn_balance", lang)),
             KeyboardButton(text=get_text("btn_invite_center", lang)),
             KeyboardButton(text=get_text("btn_shop_redeem", lang))
+        ],
+        [
+            KeyboardButton(text=get_text("btn_daily_bonus", lang))
         ],
         [
             KeyboardButton(text=get_text("btn_main_menu", lang))
@@ -204,7 +208,6 @@ def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     t_prem = get_text("btn_buy_prem_menu", lang)
     t_coins = get_text("btn_use_coins", lang)
     t_redeem = get_text("btn_redeem_code", lang)
-    t_bonus = get_text("btn_daily_bonus", lang)
     
     buttons = [
         [
@@ -212,7 +215,6 @@ def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             KeyboardButton(text=t_coins)
         ],
         [
-            KeyboardButton(text=t_bonus),
             KeyboardButton(text=t_redeem)
         ],
         [
