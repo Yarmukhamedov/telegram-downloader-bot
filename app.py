@@ -266,7 +266,38 @@ async def cb_use_coins_menu(callback: types.CallbackQuery):
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     text = get_text("use_coins_text", lang, coins=coins)
-    await callback.message.answer(text, reply_markup=get_use_coins_keyboard(lang, callback.message.message_id), parse_mode="Markdown")
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=get_use_coins_keyboard(lang, callback.message.message_id, show_back_to_balance=True),
+            parse_mode="Markdown"
+        )
+    except Exception:
+        await callback.message.answer(
+            text,
+            reply_markup=get_use_coins_keyboard(lang, callback.message.message_id, show_back_to_balance=True),
+            parse_mode="Markdown"
+        )
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("back_to_balance"))
+async def cb_back_to_balance(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    lang = await get_user_language(user_id)
+    coins = await get_user_coins(user_id)
+    text = get_text("balance_text", lang, coins=coins)
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=get_balance_keyboard(lang, callback.message.message_id),
+            parse_mode="Markdown"
+        )
+    except Exception:
+        await callback.message.answer(
+            text,
+            reply_markup=get_balance_keyboard(lang, callback.message.message_id),
+            parse_mode="Markdown"
+        )
     await callback.answer()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))

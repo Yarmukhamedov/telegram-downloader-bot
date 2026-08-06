@@ -252,12 +252,15 @@ def get_buy_prem_stars_keyboard(lang: str = "uz", user_msg_id: int = 0) -> Inlin
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_use_coins_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
+def get_use_coins_keyboard(lang: str = "uz", user_msg_id: int = 0, show_back_to_balance: bool = False) -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text=get_text("btn_shop_vip7", lang), callback_data=f"buy_shop:vip7:{user_msg_id}")],
         [InlineKeyboardButton(text=get_text("btn_shop_vip30", lang), callback_data=f"buy_shop:vip30:{user_msg_id}")],
         [InlineKeyboardButton(text=get_text("btn_shop_limit", lang), callback_data=f"buy_shop:limit:{user_msg_id}")]
     ]
+    if show_back_to_balance:
+        btn_back = get_text("btn_back", lang)
+        buttons.append([InlineKeyboardButton(text=btn_back, callback_data=f"back_to_balance:{user_msg_id}")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_payment_receipt_keyboard(user_id: int) -> InlineKeyboardMarkup:
