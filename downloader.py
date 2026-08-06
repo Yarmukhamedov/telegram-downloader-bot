@@ -536,6 +536,9 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         if h: height = h
         if d: duration = d
 
+    logger.info(f"🚀 ✅ Threads media ({'Video ' + quality if is_video else 'Photo'}) downloaded successfully to {out_file}")
+    return out_file, {"title": title, "width": width, "height": height, "duration": duration, "is_photo": not is_video}
+
 def download_instagram_media(url: str, quality: str = 'best', progress_fn=None) -> tuple[str, dict]:
     """Custom high-speed media downloader for Instagram posts, reels, and photos"""
     logger.info(f"📸 Attempting custom Instagram downloader for: {url}")
