@@ -644,6 +644,31 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
             title = video_info.get("title", f"{platform} Media")
             bot_info = await bot_inst.get_me()
 
+            media_list = video_info.get("media_list", [])
+            if len(media_list) > 1:
+                from aiogram.utils.media_group import MediaGroupBuilder
+                await safe_edit_status(get_text("step_uploading", lang, size=0.0))
+                
+                album_builder = MediaGroupBuilder(caption=f"📸 {title}\n\n🤖 @{bot_info.username}")
+                for item in media_list:
+                    p = item["path"]
+                    if item.get("is_photo") or p.endswith(('.jpg', '.jpeg', '.png', '.webp')):
+                        album_builder.add_photo(media=FSInputFile(p))
+                    else:
+                        album_builder.add_video(media=FSInputFile(p))
+                
+                await message.answer_media_group(media=album_builder.build())
+                await record_download(message.from_user.id, url, platform, "Album")
+                await check_and_notify_referral(message.from_user.id, bot_inst)
+                
+                for item in media_list:
+                    if os.path.exists(item["path"]):
+                        try:
+                            os.remove(item["path"])
+                        except Exception:
+                            pass
+                return
+
             if file_path.endswith(('.jpg', '.jpeg', '.png', '.webp')) or video_info.get("is_photo"):
                 file_size_mb = os.path.getsize(file_path) / (1024 * 1024) if os.path.exists(file_path) else 0.0
                 await safe_edit_status(get_text("step_uploading", lang, size=file_size_mb))

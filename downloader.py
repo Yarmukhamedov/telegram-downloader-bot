@@ -473,8 +473,16 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         img_matches = re.findall(r'\"image_versions2\":\{\"candidates\":\[\{\"height\":\d+,\"url\":\"([^\"]+)\"', html)
         if not img_matches:
             img_matches = re.findall(r'\"display_resources\":\[\{\"src\":\"([^\"]+)\"', html)
+        
+        all_imgs = []
         if img_matches:
-            media_url = clean(img_matches[0])
+            for im in img_matches:
+                clean_im = clean(im)
+                if clean_im not in all_imgs and 'static.cdninstagram' not in clean_im and 'rsrc.php' not in clean_im:
+                    all_imgs.append(clean_im)
+
+        if all_imgs:
+            media_url = all_imgs[0]
         else:
             raise Exception("Threads video or photo URL not found in post HTML")
 
@@ -512,6 +520,25 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
             title = f"Threads Post by @{user_match.group(1)}"
         else:
             title = "Threads Post"
+
+    # Multi-photo Carousel check for Threads
+    if not is_video and 'all_imgs' in locals() and len(all_imgs) > 1:
+        media_list = []
+        os.makedirs("downloads", exist_ok=True)
+        for idx, img_url in enumerate(all_imgs[:10]):
+            out_photo = f"downloads/threads_{abs(hash(url))}_{idx}.jpg"
+            try:
+                r_img = requests.get(img_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+                if r_img.status_code == 200:
+                    with open(out_photo, "wb") as f:
+                        f.write(r_img.content)
+                    media_list.append({"path": out_photo, "is_photo": True})
+            except Exception as slide_err:
+                logger.warning(f"Threads slide {idx} download error: {slide_err}")
+
+        if len(media_list) > 1:
+            logger.info(f"🚀 ✅ Threads album ({len(media_list)} photos) downloaded successfully")
+            return media_list[0]["path"], {"title": title, "media_list": media_list, "is_photo": True}
 
     os.makedirs("downloads", exist_ok=True)
     ext = ".mp4" if is_video else ".jpg"
@@ -617,13 +644,43 @@ def download_instagram_media(url: str, quality: str = 'best', progress_fn=None) 
             logger.warning(f"Instagram GQL doc_id {did} warning: {err}")
 
     if media_data:
-        is_video = media_data.get('is_video', False)
-        media_url = media_data.get('video_url') if is_video else media_data.get('display_url')
         caption = "Instagram Post"
         try:
-            caption = media_data.get('edge_media_to_caption', {}).get('edges', [{}])[0].get('node', {}).get('text') or caption
+            raw_cap = media_data.get('edge_media_to_caption', {}).get('edges', [{}])[0].get('node', {}).get('text') or caption
+            caption = clean_title(raw_cap)
         except Exception:
             pass
+
+        # Multi-item Carousel / Sidecar check for Instagram
+        children = media_data.get('edge_sidecar_to_children', {}).get('edges', [])
+        if children:
+            media_list = []
+            os.makedirs("downloads", exist_ok=True)
+            for idx, child in enumerate(children[:10]):
+                node = child.get('node', {})
+                is_vid = node.get('is_video', False)
+                item_url = node.get('video_url') if is_vid else node.get('display_url')
+                if not item_url and node.get('image_versions2', {}).get('candidates'):
+                    item_url = node['image_versions2']['candidates'][0].get('url')
+
+                if item_url:
+                    ext = ".mp4" if is_vid else ".jpg"
+                    out_path = f"downloads/ig_{abs(hash(url))}_{idx}{ext}"
+                    try:
+                        v_req = urllib.request.Request(item_url, headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(v_req) as v_resp:
+                            with open(out_path, "wb") as f:
+                                f.write(v_resp.read())
+                        media_list.append({"path": out_path, "is_photo": not is_vid})
+                    except Exception as item_err:
+                        logger.warning(f"Instagram carousel slide {idx} error: {item_err}")
+
+            if len(media_list) > 1:
+                logger.info(f"🚀 ✅ Instagram album ({len(media_list)} items) downloaded successfully")
+                return media_list[0]["path"], {"title": caption[:100], "media_list": media_list, "is_photo": media_list[0]["is_photo"]}
+
+        is_video = media_data.get('is_video', False)
+        media_url = media_data.get('video_url') if is_video else media_data.get('display_url')
 
         if media_url:
             os.makedirs("downloads", exist_ok=True)
