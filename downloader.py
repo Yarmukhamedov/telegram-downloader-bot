@@ -551,23 +551,31 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         else:
             title = "Threads Post"
 
-    # Multi-photo Carousel check for Threads (only create album if explicit carousel indicators exist)
-    c_blocks = re.findall(r'\"carousel_media\":\[(.*?)\]', html, re.DOTALL)
-    is_carousel_post = bool(c_blocks) or ("carousel_media_ids" in html) or ("edge_sidecar_to_children" in html)
-
-    if is_carousel_post and c_blocks:
-        c_imgs = re.findall(r'\"image_versions2\":\{.*?\"url\":\"([^\"]+)\"', c_blocks[0])
-        if c_imgs:
-            c_all = []
-            c_seen = set()
-            for im in c_imgs:
-                clean_im = clean(im)
-                img_id = get_image_id(clean_im)
-                if img_id not in c_seen and 'static.cdninstagram' not in clean_im and 'rsrc.php' not in clean_im and 'profile' not in clean_im:
+    # Multi-photo Carousel check for Threads (only enable album mode for verified carousel_media slides)
+    c_blocks = re.findall(r'\"carousel_media\":\s*\[(.*?)\]\s*,\s*\"', html, re.DOTALL)
+    if not c_blocks:
+        c_blocks = re.findall(r'\"carousel_media\":\s*\[(.*?)\]', html, re.DOTALL)
+        
+    is_carousel_post = False
+    if c_blocks:
+        items = re.findall(r'\{\s*\"image_versions2\":.*?\}(?=\s*,\s*\{|\s*$)', c_blocks[0], re.DOTALL)
+        if not items:
+            items = re.findall(r'\"image_versions2\":\{.*?\"url\":\"([^\"]+)\"', c_blocks[0])
+            
+        c_all = []
+        c_seen = set()
+        for item in items:
+            urls = re.findall(r'\"url\":\s*\"([^\"]+)\"', item) if '\"url\"' in item else [item]
+            if urls:
+                cu = clean(urls[0])
+                img_id = get_image_id(cu)
+                if img_id not in c_seen and 'static.cdninstagram' not in cu and 'rsrc.php' not in cu and 'profile' not in cu:
                     c_seen.add(img_id)
-                    c_all.append(clean_im)
-            if len(c_all) > 1:
-                all_imgs = c_all
+                    c_all.append(cu)
+                    
+        if len(c_all) > 1:
+            all_imgs = c_all
+            is_carousel_post = True
 
     if not is_video and is_carousel_post and 'all_imgs' in locals() and len(all_imgs) > 1:
         media_list = []
