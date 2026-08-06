@@ -470,15 +470,36 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         is_video = True
         media_url = v_url
     else:
-        img_matches = re.findall(r'\"image_versions2\":\{\"candidates\":\[\{\"height\":\d+,\"url\":\"([^\"]+)\"', html)
+        def get_image_id(url_str):
+            match = re.search(r'/(\d+_\d+_\d+_n\.(?:jpg|jpeg|png|webp))', url_str)
+            if match:
+                return match.group(1)
+            return url_str
+
+        # Scope HTML payload to main post JSON block to avoid suggested/recommended posts
+        post_payload = html
+        thread_match = re.search(r'\"thread_items\":\[(.*?)\]', html, re.DOTALL)
+        if thread_match:
+            post_payload = thread_match.group(1)
+        else:
+            post_match = re.search(r'\"containing_thread\":\{(.*?)\}\}\}', html, re.DOTALL)
+            if post_match:
+                post_payload = post_match.group(1)
+
+        img_matches = re.findall(r'\"image_versions2\":\{\"candidates\":\[\{\"height\":\d+,\"url\":\"([^\"]+)\"', post_payload)
         if not img_matches:
-            img_matches = re.findall(r'\"display_resources\":\[\{\"src\":\"([^\"]+)\"', html)
-        
+            img_matches = re.findall(r'\"display_resources\":\[\{\"src\":\"([^\"]+)\"', post_payload)
+        if not img_matches:
+            img_matches = re.findall(r'\"display_url\":\"([^\"]+)\"', post_payload)
+
         all_imgs = []
+        seen_ids = set()
         if img_matches:
             for im in img_matches:
                 clean_im = clean(im)
-                if clean_im not in all_imgs and 'static.cdninstagram' not in clean_im and 'rsrc.php' not in clean_im:
+                img_id = get_image_id(clean_im)
+                if img_id not in seen_ids and 'static.cdninstagram' not in clean_im and 'rsrc.php' not in clean_im and 'profile' not in clean_im:
+                    seen_ids.add(img_id)
                     all_imgs.append(clean_im)
 
         if all_imgs:
