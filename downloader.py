@@ -363,6 +363,35 @@ def download_via_cobalt_fallback(url: str, quality: str) -> tuple[str, dict]:
 
     raise Exception("Cobalt API fallback failed")
 
+def clean_title(title: str) -> str:
+    """Decodes raw JSON unicode escapes (e.g. \\ud83e\\udd23), HTML entities, and surrogate pairs into clean emojis"""
+    if not title:
+        return ""
+    import html as html_lib
+
+    # 1. Unescape HTML entities (&amp;, &quot;, etc.)
+    title = html_lib.unescape(title)
+
+    # 2. Decode \\uXXXX unicode escapes into actual characters
+    def replace_u(match):
+        hex_code = match.group(1)
+        try:
+            return chr(int(hex_code, 16))
+        except ValueError:
+            return match.group(0)
+
+    decoded = re.sub(r"\\u([0-9a-fa-f]{4})", replace_u, title)
+
+    # 3. Combine UTF-16 surrogate pairs into real Unicode Emojis
+    try:
+        title = decoded.encode("utf-16", "surrogatepass").decode("utf-16")
+    except Exception:
+        title = decoded
+
+    # 4. Clean up escaped newlines and extra quotes
+    title = title.replace(r"\n", " ").replace(r"\"", '"').strip()
+    return title
+
 def download_threads_media(url: str, quality: str = 'best', progress_fn=None) -> tuple[str, dict]:
     """Custom high-speed media downloader for Threads.net / Threads.com posts (supports 18+ & restricted content via cookies and quality selection)"""
     logger.info(f"🧵 Attempting custom Threads downloader for: {url} (Quality: {quality})")
@@ -460,8 +489,7 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         captions = re.findall(r'\"text\":\"([^\"]+)\"', html)
 
     for c in captions:
-        t = c.replace(r'\n', ' ').replace(r'\"', '"')
-        t = html_lib.unescape(t).strip()
+        t = clean_title(c)
         if t and not any(bad in t.lower() for bad in GENERIC_FALLBACKS):
             title = t
             break
@@ -473,7 +501,7 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
             og_desc = re.findall(r'<meta[^>]+name=[\"\']twitter:description[\"\'][^>]+content=[\"\']([^\"\']+)[\"\']', html, re.IGNORECASE)
         
         if og_desc:
-            t = html_lib.unescape(og_desc[0]).strip()
+            t = clean_title(og_desc[0])
             if t and not any(bad in t.lower() for bad in GENERIC_FALLBACKS):
                 title = t
 
