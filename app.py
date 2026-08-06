@@ -251,7 +251,8 @@ async def cmd_profile(message: types.Message, state: FSMContext):
                     pref_q=pref_q,
                     joined_at=joined_at,
                     total_downloads=total_downloads)
-    await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
+    p_msg = await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
+    user_profile_msgs[user['user_id']] = [p_msg.message_id]
 
 @dp.message(F.text.in_(get_all_button_texts("btn_balance")))
 async def cmd_balance(message: types.Message):
@@ -321,8 +322,18 @@ async def cb_close_balance(callback: types.CallbackQuery):
         except Exception:
             pass
             
+user_profile_msgs = {}
 invite_sub_msgs = {}
 invite_center_main_msgs = {}
+
+async def clean_user_profile_msgs(user_id: int, bot: Bot):
+    if user_id in user_profile_msgs:
+        for mid in user_profile_msgs[user_id]:
+            try:
+                await bot.delete_message(chat_id=user_id, message_id=mid)
+            except Exception:
+                pass
+        user_profile_msgs[user_id] = []
 
 async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Message = None):
     if trigger_msg:
@@ -370,7 +381,8 @@ async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
         joined_at = user['joined_at'][:10] if user.get('joined_at') else "N/A"
         total_downloads = await get_user_total_downloads(user['user_id'])
         text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user_fname, status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q, joined_at=joined_at, total_downloads=total_downloads)
-        await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
+        p_msg = await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
+        user_profile_msgs[user_id] = [p_msg.message_id]
     else:
         await state.clear()
         is_admin = user_id in get_admin_ids()
@@ -393,6 +405,8 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: F
     await state.set_state("in_invite_center")
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
+    
+    await clean_user_profile_msgs(user_id, bot)
     await clean_invite_sub_msgs(user_id, bot)
     lang = await get_user_language(user_id)
     
