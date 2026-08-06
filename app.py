@@ -322,6 +322,7 @@ async def cb_close_balance(callback: types.CallbackQuery):
             pass
             
 invite_sub_msgs = {}
+invite_center_main_msgs = {}
 
 async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Message = None):
     if trigger_msg:
@@ -336,6 +337,12 @@ async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Messa
             except Exception:
                 pass
         invite_sub_msgs[user_id] = []
+    if user_id in invite_center_main_msgs:
+        try:
+            await bot.delete_message(chat_id=user_id, message_id=invite_center_main_msgs[user_id])
+        except Exception:
+            pass
+        del invite_center_main_msgs[user_id]
 
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
 async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
@@ -389,7 +396,8 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: F
     lang = await get_user_language(user_id)
     
     text = get_text("invite_center_welcome", lang)
-    await msg.answer(text, reply_markup=get_invite_center_reply_keyboard(lang), parse_mode="Markdown")
+    ic_msg = await msg.answer(text, reply_markup=get_invite_center_reply_keyboard(lang), parse_mode="Markdown")
+    invite_center_main_msgs[user_id] = ic_msg.message_id
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
@@ -408,6 +416,8 @@ async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: 
     m_ids = [out_msg.message_id]
     if isinstance(event, types.Message):
         m_ids.append(event.message_id)
+    if user_id in invite_center_main_msgs:
+        m_ids.append(invite_center_main_msgs[user_id])
     invite_sub_msgs[user_id] = m_ids
     
     if isinstance(event, types.CallbackQuery):
@@ -430,6 +440,8 @@ async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot:
     m_ids = [out_msg.message_id]
     if isinstance(event, types.Message):
         m_ids.append(event.message_id)
+    if user_id in invite_center_main_msgs:
+        m_ids.append(invite_center_main_msgs[user_id])
     invite_sub_msgs[user_id] = m_ids
     
     if isinstance(event, types.CallbackQuery):
