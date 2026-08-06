@@ -338,10 +338,11 @@ async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Messa
                 pass
         invite_sub_msgs[user_id] = []
     if user_id in invite_center_main_msgs:
-        try:
-            await bot.delete_message(chat_id=user_id, message_id=invite_center_main_msgs[user_id])
-        except Exception:
-            pass
+        for mid in invite_center_main_msgs[user_id]:
+            try:
+                await bot.delete_message(chat_id=user_id, message_id=mid)
+            except Exception:
+                pass
         del invite_center_main_msgs[user_id]
 
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
@@ -397,7 +398,12 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: F
     
     text = get_text("invite_center_welcome", lang)
     ic_msg = await msg.answer(text, reply_markup=get_invite_center_reply_keyboard(lang), parse_mode="Markdown")
-    invite_center_main_msgs[user_id] = ic_msg.message_id
+    
+    ic_ids = [ic_msg.message_id]
+    if isinstance(event, types.Message):
+        ic_ids.append(event.message_id)
+    invite_center_main_msgs[user_id] = ic_ids
+
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
@@ -411,13 +417,13 @@ async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: 
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
     
     text = get_text("invite_link_text", lang, ref_link=ref_link)
-    out_msg = await msg.answer(text, reply_markup=get_single_back_keyboard(lang), parse_mode="Markdown")
+    out_msg = await msg.answer(text, reply_markup=get_invite_center_keyboard(ref_link, lang), parse_mode="Markdown")
     
     m_ids = [out_msg.message_id]
     if isinstance(event, types.Message):
         m_ids.append(event.message_id)
     if user_id in invite_center_main_msgs:
-        m_ids.append(invite_center_main_msgs[user_id])
+        m_ids.extend(invite_center_main_msgs[user_id])
     invite_sub_msgs[user_id] = m_ids
     
     if isinstance(event, types.CallbackQuery):
@@ -435,13 +441,13 @@ async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot:
                     total_ref=stats['total'],
                     active_ref=stats['active'],
                     earned_coins=stats['earned_coins'])
-    out_msg = await msg.answer(text, reply_markup=get_single_back_keyboard(lang), parse_mode="Markdown")
+    out_msg = await msg.answer(text, parse_mode="Markdown")
     
     m_ids = [out_msg.message_id]
     if isinstance(event, types.Message):
         m_ids.append(event.message_id)
     if user_id in invite_center_main_msgs:
-        m_ids.append(invite_center_main_msgs[user_id])
+        m_ids.extend(invite_center_main_msgs[user_id])
     invite_sub_msgs[user_id] = m_ids
     
     if isinstance(event, types.CallbackQuery):
