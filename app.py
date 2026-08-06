@@ -667,6 +667,10 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                             os.remove(item["path"])
                         except Exception:
                             pass
+                try:
+                    await status_msg.delete()
+                except Exception:
+                    pass
                 return
 
             if file_path.endswith(('.jpg', '.jpeg', '.png', '.webp')) or video_info.get("is_photo"):
