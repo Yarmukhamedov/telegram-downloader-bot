@@ -262,6 +262,8 @@ async def cmd_balance(message: types.Message):
 
 @dp.callback_query(F.data.startswith("use_coins_menu"))
 async def cb_use_coins_menu(callback: types.CallbackQuery):
+    parts = callback.data.split(":")
+    user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
     user_id = callback.from_user.id
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
@@ -269,19 +271,21 @@ async def cb_use_coins_menu(callback: types.CallbackQuery):
     try:
         await callback.message.edit_text(
             text,
-            reply_markup=get_use_coins_keyboard(lang, callback.message.message_id, show_back_to_balance=True),
+            reply_markup=get_use_coins_keyboard(lang, user_msg_id, show_back_to_balance=True),
             parse_mode="Markdown"
         )
     except Exception:
         await callback.message.answer(
             text,
-            reply_markup=get_use_coins_keyboard(lang, callback.message.message_id, show_back_to_balance=True),
+            reply_markup=get_use_coins_keyboard(lang, user_msg_id, show_back_to_balance=True),
             parse_mode="Markdown"
         )
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("back_to_balance"))
 async def cb_back_to_balance(callback: types.CallbackQuery):
+    parts = callback.data.split(":")
+    user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
     user_id = callback.from_user.id
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
@@ -289,13 +293,13 @@ async def cb_back_to_balance(callback: types.CallbackQuery):
     try:
         await callback.message.edit_text(
             text,
-            reply_markup=get_balance_keyboard(lang, callback.message.message_id),
+            reply_markup=get_balance_keyboard(lang, user_msg_id),
             parse_mode="Markdown"
         )
     except Exception:
         await callback.message.answer(
             text,
-            reply_markup=get_balance_keyboard(lang, callback.message.message_id),
+            reply_markup=get_balance_keyboard(lang, user_msg_id),
             parse_mode="Markdown"
         )
     await callback.answer()
@@ -304,7 +308,18 @@ async def cb_back_to_balance(callback: types.CallbackQuery):
 async def cb_close_balance(callback: types.CallbackQuery):
     parts = callback.data.split(":")
     user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
-    await delete_menu_and_user_msg(callback, user_msg_id)
+    
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+        
+    if user_msg_id > 0:
+        try:
+            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
+        except Exception:
+            pass
+            
     await callback.answer()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
