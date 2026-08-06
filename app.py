@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import FSInputFile, InlineQueryResultArticle, InputTextMessageContent
+from aiogram.types import FSInputFile, InlineQueryResultArticle, InputTextMessageContent, ReactionTypeEmoji
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
@@ -517,7 +517,11 @@ async def handle_media_download(message: types.Message, bot: Bot, state: FSMCont
                 "ℹ️ Пожалуйста, отправьте мне ссылку на YouTube, TikTok, Instagram, Threads, Pinterest или Twitter!" if lang == 'ru' else
                 "ℹ️ Please send me a link from YouTube, TikTok, Instagram, Threads, Pinterest, or Twitter!")
             await message.answer(msg)
-        return
+    # React to user's message with a ⚡ emoji to acknowledge receiving the link
+    try:
+        await message.react(reaction=[ReactionTypeEmoji(emoji="⚡")])
+    except Exception as react_err:
+        logger.warning(f"Could not set reaction on message: {react_err}")
 
     can_download, current_usage = await check_daily_limit(message.from_user.id, free_limit=15)
     if not can_download:
