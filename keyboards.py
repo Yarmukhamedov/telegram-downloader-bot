@@ -209,11 +209,11 @@ def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
             KeyboardButton(text=t_prem),
-            KeyboardButton(text=t_redeem),
             KeyboardButton(text=t_coins)
         ],
         [
-            KeyboardButton(text=t_bonus)
+            KeyboardButton(text=t_bonus),
+            KeyboardButton(text=t_redeem)
         ],
         [
             KeyboardButton(text=get_text("btn_back", lang)),
