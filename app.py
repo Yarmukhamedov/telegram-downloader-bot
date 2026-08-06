@@ -35,7 +35,7 @@ from keyboards import (
     get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
     get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
     get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
-    get_invite_center_reply_keyboard, get_settings_reply_keyboard
+    get_invite_center_reply_keyboard, get_settings_reply_keyboard, get_balance_keyboard
 )
 from locales import get_text, get_all_button_texts, get_all_registered_buttons
 from admin import admin_router, get_admin_ids
@@ -258,7 +258,16 @@ async def cmd_balance(message: types.Message):
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     text = get_text("balance_text", lang, coins=coins)
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_balance_keyboard(lang, message.message_id), parse_mode="Markdown")
+
+@dp.callback_query(F.data.startswith("use_coins_menu"))
+async def cb_use_coins_menu(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    lang = await get_user_language(user_id)
+    coins = await get_user_coins(user_id)
+    text = get_text("use_coins_text", lang, coins=coins)
+    await callback.message.answer(text, reply_markup=get_use_coins_keyboard(lang, callback.message.message_id), parse_mode="Markdown")
+    await callback.answer()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
 async def cmd_back_main(message: types.Message, state: FSMContext):

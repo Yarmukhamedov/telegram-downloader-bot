@@ -54,8 +54,7 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
             KeyboardButton(text=get_text("btn_balance", lang)),
-            KeyboardButton(text=get_text("btn_invite_center", lang)),
-            KeyboardButton(text=get_text("btn_shop_redeem", lang))
+            KeyboardButton(text=get_text("btn_invite_center", lang))
         ],
         [
             KeyboardButton(text=get_text("btn_daily_bonus", lang))
@@ -65,6 +64,13 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
         ]
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
+def get_balance_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
+    btn_text = "🪙 Coinlarni sarflash" if lang == 'uz' else ("🪙 Потратить монеты" if lang == 'ru' else "🪙 Spend Coins")
+    buttons = [
+        [InlineKeyboardButton(text=btn_text, callback_data=f"use_coins_menu:{user_msg_id}")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
