@@ -551,8 +551,25 @@ def download_threads_media(url: str, quality: str = 'best', progress_fn=None) ->
         else:
             title = "Threads Post"
 
-    # Multi-photo Carousel check for Threads
-    if not is_video and 'all_imgs' in locals() and len(all_imgs) > 1:
+    # Multi-photo Carousel check for Threads (only create album if explicit carousel indicators exist)
+    c_blocks = re.findall(r'\"carousel_media\":\[(.*?)\]', html, re.DOTALL)
+    is_carousel_post = bool(c_blocks) or ("carousel_media_ids" in html) or ("edge_sidecar_to_children" in html)
+
+    if is_carousel_post and c_blocks:
+        c_imgs = re.findall(r'\"image_versions2\":\{.*?\"url\":\"([^\"]+)\"', c_blocks[0])
+        if c_imgs:
+            c_all = []
+            c_seen = set()
+            for im in c_imgs:
+                clean_im = clean(im)
+                img_id = get_image_id(clean_im)
+                if img_id not in c_seen and 'static.cdninstagram' not in clean_im and 'rsrc.php' not in clean_im and 'profile' not in clean_im:
+                    c_seen.add(img_id)
+                    c_all.append(clean_im)
+            if len(c_all) > 1:
+                all_imgs = c_all
+
+    if not is_video and is_carousel_post and 'all_imgs' in locals() and len(all_imgs) > 1:
         media_list = []
         os.makedirs("downloads", exist_ok=True)
         for idx, img_url in enumerate(all_imgs[:10]):
