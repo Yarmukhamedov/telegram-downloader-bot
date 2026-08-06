@@ -300,6 +300,13 @@ async def cb_back_to_balance(callback: types.CallbackQuery):
         )
     await callback.answer()
 
+@dp.callback_query(F.data.startswith("close_balance:"))
+async def cb_close_balance(callback: types.CallbackQuery):
+    parts = callback.data.split(":")
+    user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    await delete_menu_and_user_msg(callback, user_msg_id)
+    await callback.answer()
+
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
 async def cmd_back_main(message: types.Message, state: FSMContext):
     user_id = message.from_user.id

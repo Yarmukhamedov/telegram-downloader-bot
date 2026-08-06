@@ -66,9 +66,11 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 def get_balance_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboardMarkup:
-    btn_text = "🪙 Coinlarni sarflash" if lang == 'uz' else ("🪙 Потратить монеты" if lang == 'ru' else "🪙 Spend Coins")
+    btn_spend = "🪙 Coinlarni sarflash" if lang == 'uz' else ("🪙 Потратить монеты" if lang == 'ru' else "🪙 Spend Coins")
+    btn_close = "❌ Yopish" if lang == 'uz' else ("❌ Закрыть" if lang == 'ru' else "❌ Close")
     buttons = [
-        [InlineKeyboardButton(text=btn_text, callback_data=f"use_coins_menu:{user_msg_id}")]
+        [InlineKeyboardButton(text=btn_spend, callback_data=f"use_coins_menu:{user_msg_id}")],
+        [InlineKeyboardButton(text=btn_close, callback_data=f"close_balance:{user_msg_id}")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -212,15 +214,11 @@ def get_invite_center_keyboard(ref_link: str, lang: str = "uz") -> InlineKeyboar
 
 def get_shop_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     t_prem = get_text("btn_buy_prem_menu", lang)
-    t_coins = get_text("btn_use_coins", lang)
     t_redeem = get_text("btn_redeem_code", lang)
     
     buttons = [
         [
             KeyboardButton(text=t_prem),
-            KeyboardButton(text=t_coins)
-        ],
-        [
             KeyboardButton(text=t_redeem)
         ],
         [
