@@ -35,7 +35,8 @@ from keyboards import (
     get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
     get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
     get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
-    get_invite_center_reply_keyboard, get_settings_reply_keyboard, get_balance_keyboard, get_single_back_keyboard
+    get_invite_center_reply_keyboard, get_settings_reply_keyboard, get_balance_keyboard, get_single_back_keyboard,
+    get_ok_keyboard
 )
 from locales import get_text, get_all_button_texts, get_all_registered_buttons
 from admin import admin_router, get_admin_ids
@@ -470,9 +471,29 @@ async def cmd_daily_bonus(message: types.Message):
     lang = await get_user_language(user_id)
     success, code, coins = await claim_daily_bonus(user_id, bonus_amount=10)
     if success:
-        await message.answer(get_text("daily_bonus_claimed", lang, coins=coins), parse_mode="Markdown")
+        text = get_text("daily_bonus_claimed", lang, coins=coins)
     else:
-        await message.answer(get_text("daily_bonus_already", lang, coins=coins), parse_mode="Markdown")
+        text = get_text("daily_bonus_already", lang, coins=coins)
+        
+    await message.answer(text, reply_markup=get_ok_keyboard(message.message_id), parse_mode="Markdown")
+
+@dp.callback_query(F.data.startswith("close_daily_bonus:"))
+async def cb_close_daily_bonus(callback: types.CallbackQuery):
+    parts = callback.data.split(":")
+    user_msg_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+        
+    if user_msg_id > 0:
+        try:
+            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=user_msg_id)
+        except Exception:
+            pass
+            
+    await callback.answer()
 
 @dp.callback_query(F.data.startswith("buy_shop:"))
 async def cb_buy_shop(callback: types.CallbackQuery):

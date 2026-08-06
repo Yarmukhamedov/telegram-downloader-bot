@@ -83,6 +83,12 @@ def get_balance_keyboard(lang: str = "uz", user_msg_id: int = 0) -> InlineKeyboa
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+def get_ok_keyboard(user_msg_id: int = 0) -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(text="👌 OK", callback_data=f"close_daily_bonus:{user_msg_id}")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
