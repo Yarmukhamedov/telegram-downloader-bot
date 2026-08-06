@@ -35,7 +35,7 @@ from keyboards import (
     get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
     get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
     get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
-    get_invite_center_reply_keyboard, get_settings_reply_keyboard, get_balance_keyboard
+    get_invite_center_reply_keyboard, get_settings_reply_keyboard, get_balance_keyboard, get_single_back_keyboard
 )
 from locales import get_text, get_all_button_texts, get_all_registered_buttons
 from admin import admin_router, get_admin_ids
@@ -320,11 +320,26 @@ async def cb_close_balance(callback: types.CallbackQuery):
         except Exception:
             pass
             
-    await callback.answer()
+invite_sub_msgs = {}
+
+async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Message = None):
+    if trigger_msg:
+        try:
+            await trigger_msg.delete()
+        except Exception:
+            pass
+    if user_id in invite_sub_msgs:
+        for mid in invite_sub_msgs[user_id]:
+            try:
+                await bot.delete_message(chat_id=user_id, message_id=mid)
+            except Exception:
+                pass
+        invite_sub_msgs[user_id] = []
 
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
-async def cmd_back_main(message: types.Message, state: FSMContext):
+async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
+    await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
     lang = await get_user_language(user_id)
     current_state = await state.get_state()
     if current_state in ["in_shop", "in_invite_center"]:
@@ -354,9 +369,10 @@ async def cmd_back_main(message: types.Message, state: FSMContext):
         await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
 @dp.message(F.text.in_(get_all_button_texts("btn_main_menu")))
-async def cmd_home_main(message: types.Message, state: FSMContext):
-    await state.clear()
+async def cmd_home_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
+    await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
+    await state.clear()
     lang = await get_user_language(user_id)
     is_admin = user_id in get_admin_ids()
     text = get_text("back_main_menu", lang)
@@ -368,6 +384,7 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: F
     await state.set_state("in_invite_center")
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
+    await clean_invite_sub_msgs(user_id, bot)
     lang = await get_user_language(user_id)
     
     text = get_text("invite_center_welcome", lang)
@@ -385,7 +402,13 @@ async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: 
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
     
     text = get_text("invite_link_text", lang, ref_link=ref_link)
-    await msg.answer(text, reply_markup=get_invite_center_keyboard(ref_link, lang), parse_mode="Markdown")
+    out_msg = await msg.answer(text, reply_markup=get_single_back_keyboard(lang), parse_mode="Markdown")
+    
+    m_ids = [out_msg.message_id]
+    if isinstance(event, types.Message):
+        m_ids.append(event.message_id)
+    invite_sub_msgs[user_id] = m_ids
+    
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
@@ -401,7 +424,13 @@ async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot:
                     total_ref=stats['total'],
                     active_ref=stats['active'],
                     earned_coins=stats['earned_coins'])
-    await msg.answer(text, parse_mode="Markdown")
+    out_msg = await msg.answer(text, reply_markup=get_single_back_keyboard(lang), parse_mode="Markdown")
+    
+    m_ids = [out_msg.message_id]
+    if isinstance(event, types.Message):
+        m_ids.append(event.message_id)
+    invite_sub_msgs[user_id] = m_ids
+    
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 

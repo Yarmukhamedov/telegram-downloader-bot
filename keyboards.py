@@ -29,6 +29,15 @@ def get_settings_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
+def get_single_back_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    buttons = [
+        [
+            KeyboardButton(text=get_text("btn_back", lang)),
+            KeyboardButton(text=get_text("btn_main_menu", lang))
+        ]
+    ]
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
 def get_admin_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
