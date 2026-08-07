@@ -813,6 +813,13 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
     user = await get_or_create_user(message.from_user.id)
     is_vip = user['is_premium']
     lang = user.get('language', 'uz')
+    
+    # Send live chat action indicator (typing/uploading)
+    try:
+        await bot_inst.send_chat_action(chat_id=message.chat.id, action="upload_video" if quality != "mp3" else "upload_document")
+    except Exception:
+        pass
+
     status_msg = await message.answer(get_text("processing_link", lang, icon=icon, platform=platform), parse_mode="Markdown")
     loop = asyncio.get_event_loop()
     last_update_time = [0.0]
@@ -838,13 +845,13 @@ async def process_and_send_media(message: types.Message, url: str, platform: str
                 eta = re.sub(r'\x1b\[[0-9;]*m', '', str(d.get('_eta_str', 'N/A'))).strip()
                 
                 current_time = loop.time()
-                if current_time - last_update_time[0] >= 1.5:
+                if current_time - last_update_time[0] >= 1.0:
                     last_update_time[0] = current_time
                     text = get_text("downloading_progress", lang, platform=platform, p=p, speed=speed, eta=eta)
                     asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
             elif st == 'finished':
                 current_time = loop.time()
-                if current_time - last_update_time[0] >= 1.0:
+                if current_time - last_update_time[0] >= 0.8:
                     last_update_time[0] = current_time
                     text = get_text("step_converting", lang)
                     asyncio.run_coroutine_threadsafe(safe_edit_status(text), loop)
