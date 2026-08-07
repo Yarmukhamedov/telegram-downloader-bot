@@ -85,25 +85,32 @@ async def stream_typewriter_text(
     full_text: str,
     reply_markup=None,
     parse_mode: str = "Markdown",
-    chunk_words: int = 5,
-    delay: float = 0.2
+    chunk_chars: int = 14,
+    delay: float = 0.08
 ):
-    words = full_text.split(" ")
-    if len(words) <= chunk_words:
+    if len(full_text) <= chunk_chars * 2:
         return await message.answer(full_text, reply_markup=reply_markup, parse_mode=parse_mode)
 
-    current_text = " ".join(words[:chunk_words])
-    sent_msg = await message.answer(current_text + " ▌")
+    idx = chunk_chars
+    initial_snippet = re.sub(r'[*_`~]', '', full_text[:idx])
+    sent_msg = await message.answer(initial_snippet + " ▌")
     
-    i = chunk_words
-    while i < len(words):
-        i += chunk_words
-        current_text = " ".join(words[:min(i, len(words))])
-        try:
-            await sent_msg.edit_text(current_text + " ▌")
-        except Exception as e:
-            if "message is not modified" not in str(e).lower():
-                pass
+    last_edit = time.time()
+    
+    while idx < len(full_text):
+        idx += chunk_chars
+        current_snippet = full_text[:min(idx, len(full_text))]
+        
+        now = time.time()
+        if now - last_edit >= 0.08:
+            last_edit = now
+            try:
+                safe_snippet = re.sub(r'[*_`~]', '', current_snippet)
+                await sent_msg.edit_text(safe_snippet + " ▌")
+            except Exception as e:
+                err_str = str(e).lower()
+                if "message is not modified" not in err_str and "too many requests" not in err_str:
+                    pass
         await asyncio.sleep(delay)
 
     try:
