@@ -35,7 +35,7 @@ from keyboards import (
     get_quality_selector_keyboard, get_profile_keyboard, get_profile_reply_keyboard,
     get_shop_reply_keyboard, get_buy_prem_stars_keyboard, get_use_coins_keyboard,
     get_payment_receipt_keyboard, get_language_keyboard, get_invite_center_keyboard, get_shop_keyboard,
-    get_invite_center_reply_keyboard, get_settings_reply_keyboard, get_balance_keyboard, get_single_back_keyboard,
+    get_settings_reply_keyboard, get_balance_keyboard, get_single_back_keyboard,
     get_ok_keyboard
 )
 from locales import get_text, get_all_button_texts, get_all_registered_buttons
@@ -332,8 +332,6 @@ async def cb_close_balance(callback: types.CallbackQuery):
             pass
             
 user_profile_msgs = {}
-invite_sub_msgs = {}
-invite_center_main_msgs = {}
 shop_session_msgs = {}
 profile_session_msgs = {}
 
@@ -382,36 +380,14 @@ async def clean_user_profile_msgs(user_id: int, bot: Bot):
                 pass
         user_profile_msgs[user_id] = []
 
-async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Message = None):
-    if trigger_msg:
-        try:
-            await trigger_msg.delete()
-        except Exception:
-            pass
-    if user_id in invite_sub_msgs:
-        for mid in invite_sub_msgs[user_id]:
-            try:
-                await bot.delete_message(chat_id=user_id, message_id=mid)
-            except Exception:
-                pass
-        invite_sub_msgs[user_id] = []
-    if user_id in invite_center_main_msgs:
-        for mid in invite_center_main_msgs[user_id]:
-            try:
-                await bot.delete_message(chat_id=user_id, message_id=mid)
-            except Exception:
-                pass
-        del invite_center_main_msgs[user_id]
-
 @dp.message(F.text.in_(get_all_button_texts("btn_back")))
 async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
-    await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
     await clean_shop_session_msgs(user_id, bot, trigger_msg=message)
     await clean_profile_session_msgs(user_id, bot, trigger_msg=message)
     lang = await get_user_language(user_id)
     current_state = await state.get_state()
-    if current_state in ["in_shop", "in_invite_center"]:
+    if current_state == "in_shop":
         await state.set_state("in_profile")
         user = await get_or_create_user(user_id, message.from_user.username, message.from_user.full_name)
         is_admin = user_id in get_admin_ids()
@@ -442,7 +418,6 @@ async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
 @dp.message(F.text.in_(get_all_button_texts("btn_main_menu")))
 async def cmd_home_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
-    await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
     await clean_shop_session_msgs(user_id, bot, trigger_msg=message)
     await clean_profile_session_msgs(user_id, bot, trigger_msg=message)
     await state.clear()
@@ -450,24 +425,6 @@ async def cmd_home_main(message: types.Message, state: FSMContext, bot: Bot):
     is_admin = user_id in get_admin_ids()
     text = get_text("back_main_menu", lang)
     await message.answer(text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
-
-@dp.message(F.text.in_(get_all_button_texts("btn_invite_center")))
-@dp.callback_query(F.data == "invite_center_menu")
-async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: FSMContext, bot: Bot):
-    await state.set_state("in_invite_center")
-    msg = event.message if isinstance(event, types.CallbackQuery) else event
-    user_id = event.from_user.id
-    lang = await get_user_language(user_id)
-    
-    text = get_text("invite_center_welcome", lang)
-    ic_msg = await msg.answer(text, reply_markup=get_invite_center_reply_keyboard(lang), parse_mode="Markdown")
-    
-    if isinstance(event, types.Message):
-        track_profile_msg(user_id, event.message_id)
-    track_profile_msg(user_id, ic_msg.message_id)
-
-    if isinstance(event, types.CallbackQuery):
-        await event.answer()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_invite_link")))
 @dp.callback_query(F.data == "show_invite_link")

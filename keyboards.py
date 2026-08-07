@@ -63,10 +63,11 @@ def get_profile_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     buttons = [
         [
             KeyboardButton(text=get_text("btn_balance", lang)),
-            KeyboardButton(text=get_text("btn_invite_center", lang))
+            KeyboardButton(text=get_text("btn_daily_bonus", lang))
         ],
         [
-            KeyboardButton(text=get_text("btn_daily_bonus", lang))
+            KeyboardButton(text=get_text("btn_invite_link", lang)),
+            KeyboardButton(text=get_text("btn_invite_stats", lang))
         ],
         [
             KeyboardButton(text=get_text("btn_main_menu", lang))
@@ -88,19 +89,6 @@ def get_ok_keyboard(user_msg_id: int = 0) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="👌 OK", callback_data=f"close_daily_bonus:{user_msg_id}")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def get_invite_center_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
-    buttons = [
-        [
-            KeyboardButton(text=get_text("btn_invite_link", lang)),
-            KeyboardButton(text=get_text("btn_invite_stats", lang))
-        ],
-        [
-            KeyboardButton(text=get_text("btn_back", lang)),
-            KeyboardButton(text=get_text("btn_main_menu", lang))
-        ]
-    ]
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 def get_language_keyboard(user_msg_id: int = 0) -> InlineKeyboardMarkup:
     buttons = [
