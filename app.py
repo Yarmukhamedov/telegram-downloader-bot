@@ -457,18 +457,14 @@ async def cmd_invite_center(event: types.Message | types.CallbackQuery, state: F
     await state.set_state("in_invite_center")
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
-    
-    await clean_user_profile_msgs(user_id, bot)
-    await clean_invite_sub_msgs(user_id, bot)
     lang = await get_user_language(user_id)
     
     text = get_text("invite_center_welcome", lang)
     ic_msg = await msg.answer(text, reply_markup=get_invite_center_reply_keyboard(lang), parse_mode="Markdown")
     
-    ic_ids = [ic_msg.message_id]
     if isinstance(event, types.Message):
-        ic_ids.append(event.message_id)
-    invite_center_main_msgs[user_id] = ic_ids
+        track_profile_msg(user_id, event.message_id)
+    track_profile_msg(user_id, ic_msg.message_id)
 
     if isinstance(event, types.CallbackQuery):
         await event.answer()
@@ -485,12 +481,9 @@ async def cmd_invite_link_menu(event: types.Message | types.CallbackQuery, bot: 
     text = get_text("invite_link_text", lang, ref_link=ref_link)
     out_msg = await msg.answer(text, reply_markup=get_invite_center_keyboard(ref_link, lang), parse_mode="Markdown")
     
-    m_ids = [out_msg.message_id]
     if isinstance(event, types.Message):
-        m_ids.append(event.message_id)
-    if user_id in invite_center_main_msgs:
-        m_ids.extend(invite_center_main_msgs[user_id])
-    invite_sub_msgs[user_id] = m_ids
+        track_profile_msg(user_id, event.message_id)
+    track_profile_msg(user_id, out_msg.message_id)
     
     if isinstance(event, types.CallbackQuery):
         await event.answer()
@@ -509,12 +502,9 @@ async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot:
                     earned_coins=stats['earned_coins'])
     out_msg = await msg.answer(text, parse_mode="Markdown")
     
-    m_ids = [out_msg.message_id]
     if isinstance(event, types.Message):
-        m_ids.append(event.message_id)
-    if user_id in invite_center_main_msgs:
-        m_ids.extend(invite_center_main_msgs[user_id])
-    invite_sub_msgs[user_id] = m_ids
+        track_profile_msg(user_id, event.message_id)
+    track_profile_msg(user_id, out_msg.message_id)
     
     if isinstance(event, types.CallbackQuery):
         await event.answer()
