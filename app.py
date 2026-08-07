@@ -329,6 +329,25 @@ async def cb_close_balance(callback: types.CallbackQuery):
 user_profile_msgs = {}
 invite_sub_msgs = {}
 invite_center_main_msgs = {}
+shop_session_msgs = {}
+
+def track_shop_msg(user_id: int, message_id: int):
+    if user_id in shop_session_msgs:
+        shop_session_msgs[user_id].append(message_id)
+
+async def clean_shop_session_msgs(user_id: int, bot: Bot, trigger_msg: types.Message = None):
+    if trigger_msg:
+        try:
+            await trigger_msg.delete()
+        except Exception:
+            pass
+    if user_id in shop_session_msgs:
+        for mid in shop_session_msgs[user_id]:
+            try:
+                await bot.delete_message(chat_id=user_id, message_id=mid)
+            except Exception:
+                pass
+        shop_session_msgs[user_id] = []
 
 async def clean_user_profile_msgs(user_id: int, bot: Bot):
     if user_id in user_profile_msgs:
@@ -364,6 +383,7 @@ async def clean_invite_sub_msgs(user_id: int, bot: Bot, trigger_msg: types.Messa
 async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
     await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
+    await clean_shop_session_msgs(user_id, bot, trigger_msg=message)
     lang = await get_user_language(user_id)
     current_state = await state.get_state()
     if current_state in ["in_shop", "in_invite_center"]:
@@ -397,6 +417,7 @@ async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
 async def cmd_home_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
     await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
+    await clean_shop_session_msgs(user_id, bot, trigger_msg=message)
     await state.clear()
     lang = await get_user_language(user_id)
     is_admin = user_id in get_admin_ids()
@@ -473,15 +494,24 @@ async def cmd_invite_stats_menu(event: types.Message | types.CallbackQuery, bot:
 
 @dp.message(F.text.in_(get_all_button_texts("btn_shop_redeem")))
 @dp.callback_query(F.data == "shop_menu")
-async def cmd_shop(event: types.Message | types.CallbackQuery, state: FSMContext):
+async def cmd_shop(event: types.Message | types.CallbackQuery, state: FSMContext, bot: Bot):
     await state.set_state("in_shop")
     msg = event.message if isinstance(event, types.CallbackQuery) else event
     user_id = event.from_user.id
+    
+    await clean_shop_session_msgs(user_id, bot)
+    await clean_user_profile_msgs(user_id, bot)
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     
     text = get_text("shop_text", lang, coins=coins)
-    await msg.answer(text, reply_markup=get_shop_reply_keyboard(lang), parse_mode="Markdown")
+    s_msg = await msg.answer(text, reply_markup=get_shop_reply_keyboard(lang), parse_mode="Markdown")
+    
+    s_ids = [s_msg.message_id]
+    if isinstance(event, types.Message):
+        s_ids.append(event.message_id)
+    shop_session_msgs[user_id] = s_ids
+
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
@@ -490,7 +520,10 @@ async def cmd_buy_premium_menu(message: types.Message):
     user_id = message.from_user.id
     lang = await get_user_language(user_id)
     text = get_text("buy_premium_text", lang)
-    await message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang, message.message_id), parse_mode="Markdown")
+    bp_msg = await message.answer(text, reply_markup=get_buy_prem_stars_keyboard(lang, message.message_id), parse_mode="Markdown")
+    
+    track_shop_msg(user_id, message.message_id)
+    track_shop_msg(user_id, bp_msg.message_id)
 
 @dp.message(F.text.in_(get_all_button_texts("btn_use_coins")))
 async def cmd_use_coins_menu(message: types.Message):
@@ -498,7 +531,10 @@ async def cmd_use_coins_menu(message: types.Message):
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     text = get_text("use_coins_text", lang, coins=coins)
-    await message.answer(text, reply_markup=get_use_coins_keyboard(lang, message.message_id), parse_mode="Markdown")
+    uc_msg = await message.answer(text, reply_markup=get_use_coins_keyboard(lang, message.message_id), parse_mode="Markdown")
+    
+    track_shop_msg(user_id, message.message_id)
+    track_shop_msg(user_id, uc_msg.message_id)
 
 @dp.message(Command("daily"))
 @dp.message(F.text.in_(get_all_button_texts("btn_daily_bonus")))
@@ -572,7 +608,8 @@ async def cb_buy_shop(callback: types.CallbackQuery):
             "⚡️ Ваш лимит скачиваний на сегодня увеличен на +20!" if lang == 'ru' else
             "⚡️ Your download limit for today has been increased by +20!")
             
-    await callback.message.answer(succ)
+    succ_msg = await callback.message.answer(succ)
+    track_shop_msg(user_id, succ_msg.message_id)
     await callback.answer()
 
 @dp.message(Command("redeem"))
@@ -583,6 +620,9 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
     user_id = event.from_user.id
     lang = await get_user_language(user_id)
     
+    if isinstance(event, types.Message):
+        track_shop_msg(user_id, event.message_id)
+        
     args = msg.text.split() if isinstance(event, types.Message) and msg.text.startswith("/redeem") else []
     if len(args) > 1:
         code = args[1]
@@ -592,7 +632,8 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
         else:
             err_map = {"NOT_FOUND": "❌ Bunday promokod mavjud emas.", "EXPIRED": "❌ Bu promokodning muddati yoki limiti tuggan.", "ALREADY_USED": "❌ Siz bu promokoddan avval foydalangansiz."}
             res_text = err_map.get(r_type, "❌ Xatolik yuz berdi.")
-        await msg.answer(res_text, parse_mode="Markdown")
+        res_msg = await msg.answer(res_text, parse_mode="Markdown")
+        track_shop_msg(user_id, res_msg.message_id)
         return
         
     prompt = (
@@ -600,7 +641,9 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
         "🎟 *Введите промокод:*\n\nПример: `/redeem NAVROZ2026`" if lang == 'ru' else
         "🎟 *Enter your Promo Code:*\n\nExample: `/redeem NAVROZ2026`")
     )
-    await msg.answer(prompt, parse_mode="Markdown")
+    from keyboards import get_single_back_keyboard
+    prompt_msg = await msg.answer(prompt, reply_markup=get_single_back_keyboard(lang), parse_mode="Markdown")
+    track_shop_msg(user_id, prompt_msg.message_id)
     if isinstance(event, types.CallbackQuery):
         await event.answer()
 
@@ -632,6 +675,9 @@ async def handle_media_download(message: types.Message, bot: Bot, state: FSMCont
         return
 
     current_state = await state.get_state()
+    if current_state == "in_shop":
+        track_shop_msg(message.from_user.id, message.message_id)
+
     platform, icon, url = detect_platform_and_url(message.text)
 
     if url:
