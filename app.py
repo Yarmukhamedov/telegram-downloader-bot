@@ -80,50 +80,6 @@ async def check_channel_subscription(user_id: int, bot_inst: Bot) -> tuple[bool,
 
     return False, ch_id, ch_link
 
-async def stream_typewriter_text(
-    message: types.Message,
-    full_text: str,
-    reply_markup=None,
-    parse_mode: str = "Markdown",
-    chunk_chars: int = 14,
-    delay: float = 0.08
-):
-    if len(full_text) <= chunk_chars * 2:
-        return await message.answer(full_text, reply_markup=reply_markup, parse_mode=parse_mode)
-
-    idx = chunk_chars
-    initial_snippet = re.sub(r'[*_`~]', '', full_text[:idx])
-    sent_msg = await message.answer(initial_snippet + " ▌")
-    
-    last_edit = time.time()
-    
-    while idx < len(full_text):
-        idx += chunk_chars
-        current_snippet = full_text[:min(idx, len(full_text))]
-        
-        now = time.time()
-        if now - last_edit >= 0.08:
-            last_edit = now
-            try:
-                safe_snippet = re.sub(r'[*_`~]', '', current_snippet)
-                await sent_msg.edit_text(safe_snippet + " ▌")
-            except Exception as e:
-                err_str = str(e).lower()
-                if "message is not modified" not in err_str and "too many requests" not in err_str:
-                    pass
-        await asyncio.sleep(delay)
-
-    try:
-        await sent_msg.edit_text(full_text, reply_markup=reply_markup, parse_mode=parse_mode)
-    except Exception:
-        try:
-            plain_txt = re.sub(r'[*_`~]', '', full_text)
-            await sent_msg.edit_text(plain_txt, reply_markup=reply_markup)
-        except Exception:
-            pass
-
-    return sent_msg
-
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, bot: Bot):
     logger.info(f">>> /start command received from user_id: {message.from_user.id} ({message.from_user.full_name})")
@@ -146,7 +102,7 @@ async def cmd_start(message: types.Message, bot: Bot):
 
     bot_info = await bot.get_me()
     welcome_text = get_text("welcome", lang, name=message.from_user.first_name, bot_name=bot_info.first_name)
-    await stream_typewriter_text(message, welcome_text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
+    await message.answer(welcome_text, reply_markup=get_main_keyboard(is_admin, lang), parse_mode="Markdown")
 
 async def delete_menu_and_user_msg(callback: types.CallbackQuery, user_msg_id: int):
     try:
@@ -714,7 +670,7 @@ async def cmd_redeem_prompt(event: types.Message | types.CallbackQuery):
 async def cmd_help(message: types.Message):
     logger.info(f">>> Help clicked by user_id: {message.from_user.id}")
     lang = await get_user_language(message.from_user.id)
-    await stream_typewriter_text(message, get_text("help_text", lang), parse_mode="Markdown")
+    await message.answer(get_text("help_text", lang), parse_mode="Markdown")
 
 @dp.message(F.text.in_(get_all_button_texts("btn_admin")))
 async def cmd_admin_panel_direct(message: types.Message):
