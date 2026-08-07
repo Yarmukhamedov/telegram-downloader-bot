@@ -212,13 +212,17 @@ async def cb_close_quality(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_profile")))
-async def cmd_profile(message: types.Message, state: FSMContext):
+async def cmd_profile(message: types.Message, state: FSMContext, bot: Bot):
     await state.set_state("in_profile")
-    logger.info(f">>> Profil clicked by user_id: {message.from_user.id}")
-    user = await get_or_create_user(message.from_user.id, message.from_user.username, message.from_user.full_name)
+    user_id = message.from_user.id
+    logger.info(f">>> Profil clicked by user_id: {user_id}")
+    
+    await clean_user_profile_msgs(user_id, bot)
+    
+    user = await get_or_create_user(user_id, message.from_user.username, message.from_user.full_name)
     lang = user.get('language', 'uz')
     
-    is_admin = message.from_user.id in get_admin_ids()
+    is_admin = user_id in get_admin_ids()
     if is_admin:
         status_str = "⭐ Premium (Cheksiz)" if lang == 'uz' else ("⭐ Premium (Безлимит)" if lang == 'ru' else "⭐ Premium (Unlimited)")
         daily_limit = "Cheksiz" if lang == 'uz' else ("Безлимит" if lang == 'ru' else "Unlimited")
@@ -252,7 +256,7 @@ async def cmd_profile(message: types.Message, state: FSMContext):
                     joined_at=joined_at,
                     total_downloads=total_downloads)
     p_msg = await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
-    user_profile_msgs[user['user_id']] = [p_msg.message_id]
+    user_profile_msgs[user_id] = [p_msg.message_id, message.message_id]
 
 @dp.message(F.text.in_(get_all_button_texts("btn_balance")))
 async def cmd_balance(message: types.Message):
