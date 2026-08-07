@@ -644,7 +644,7 @@ async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
         lang = await get_user_language(callback.from_user.id)
         await callback.answer(get_text("not_subscribed_alert", lang), show_alert=True)
 
-@dp.message(F.text, ~F.text.startswith("/"))
+@dp.message(F.text, ~F.text.startswith("/"), ~F.text.in_(get_all_registered_buttons()))
 async def handle_media_download(message: types.Message, bot: Bot, state: FSMContext):
     registered_buttons = get_all_registered_buttons()
     if message.text in registered_buttons:

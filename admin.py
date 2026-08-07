@@ -29,12 +29,13 @@ class AdminStates(StatesGroup):
 
 @admin_router.message(Command("admin"))
 @admin_router.message(F.text.in_(get_all_button_texts("btn_admin")))
-async def cmd_admin_panel(message: types.Message):
+async def cmd_admin_panel(message: types.Message, state: FSMContext):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
         await message.answer("❌ Kechirasiz, siz admin emassiz!")
         return
 
+    await state.set_state("in_admin")
     try:
         lang = await get_user_language(message.from_user.id)
         text = (
