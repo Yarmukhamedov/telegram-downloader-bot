@@ -630,9 +630,9 @@ async def cmd_help(message: types.Message):
     await message.answer(get_text("help_text", lang), parse_mode="Markdown")
 
 @dp.message(F.text.in_(get_all_button_texts("btn_admin")))
-async def cmd_admin_panel_direct(message: types.Message):
+async def cmd_admin_panel_direct(message: types.Message, state: FSMContext):
     from admin import cmd_admin_panel
-    await cmd_admin_panel(message)
+    await cmd_admin_panel(message, state)
 
 @dp.callback_query(F.data == "check_subscription")
 async def cb_check_sub(callback: types.CallbackQuery, bot: Bot):
