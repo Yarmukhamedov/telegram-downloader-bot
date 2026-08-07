@@ -256,7 +256,9 @@ async def cmd_profile(message: types.Message, state: FSMContext, bot: Bot):
                     joined_at=joined_at,
                     total_downloads=total_downloads)
     p_msg = await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
-    user_profile_msgs[user_id] = [p_msg.message_id, message.message_id]
+    p_ids = [p_msg.message_id, message.message_id]
+    user_profile_msgs[user_id] = p_ids
+    profile_session_msgs[user_id] = p_ids.copy()
 
 @dp.message(F.text.in_(get_all_button_texts("btn_balance")))
 async def cmd_balance(message: types.Message):
@@ -264,7 +266,10 @@ async def cmd_balance(message: types.Message):
     lang = await get_user_language(user_id)
     coins = await get_user_coins(user_id)
     text = get_text("balance_text", lang, coins=coins)
-    await message.answer(text, reply_markup=get_balance_keyboard(lang, message.message_id), parse_mode="Markdown")
+    b_msg = await message.answer(text, reply_markup=get_balance_keyboard(lang, message.message_id), parse_mode="Markdown")
+    
+    track_profile_msg(user_id, message.message_id)
+    track_profile_msg(user_id, b_msg.message_id)
 
 @dp.callback_query(F.data.startswith("use_coins_menu"))
 async def cb_use_coins_menu(callback: types.CallbackQuery):
@@ -330,6 +335,7 @@ user_profile_msgs = {}
 invite_sub_msgs = {}
 invite_center_main_msgs = {}
 shop_session_msgs = {}
+profile_session_msgs = {}
 
 def track_shop_msg(user_id: int, message_id: int):
     if user_id in shop_session_msgs:
@@ -348,6 +354,24 @@ async def clean_shop_session_msgs(user_id: int, bot: Bot, trigger_msg: types.Mes
             except Exception:
                 pass
         shop_session_msgs[user_id] = []
+
+def track_profile_msg(user_id: int, message_id: int):
+    if user_id in profile_session_msgs:
+        profile_session_msgs[user_id].append(message_id)
+
+async def clean_profile_session_msgs(user_id: int, bot: Bot, trigger_msg: types.Message = None):
+    if trigger_msg:
+        try:
+            await trigger_msg.delete()
+        except Exception:
+            pass
+    if user_id in profile_session_msgs:
+        for mid in profile_session_msgs[user_id]:
+            try:
+                await bot.delete_message(chat_id=user_id, message_id=mid)
+            except Exception:
+                pass
+        profile_session_msgs[user_id] = []
 
 async def clean_user_profile_msgs(user_id: int, bot: Bot):
     if user_id in user_profile_msgs:
@@ -384,6 +408,7 @@ async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
     await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
     await clean_shop_session_msgs(user_id, bot, trigger_msg=message)
+    await clean_profile_session_msgs(user_id, bot, trigger_msg=message)
     lang = await get_user_language(user_id)
     current_state = await state.get_state()
     if current_state in ["in_shop", "in_invite_center"]:
@@ -407,6 +432,7 @@ async def cmd_back_main(message: types.Message, state: FSMContext, bot: Bot):
         text = get_text("profile_text", lang, user_id=user['user_id'], full_name=user_fname, status_str=status_str, coins=user.get('coins', 0), daily_downloads=user['daily_downloads'], daily_limit=daily_limit, pref_q=pref_q, joined_at=joined_at, total_downloads=total_downloads)
         p_msg = await message.answer(text, reply_markup=get_profile_reply_keyboard(lang), parse_mode="Markdown")
         user_profile_msgs[user_id] = [p_msg.message_id]
+        profile_session_msgs[user_id] = [p_msg.message_id]
     else:
         await state.clear()
         is_admin = user_id in get_admin_ids()
@@ -418,6 +444,7 @@ async def cmd_home_main(message: types.Message, state: FSMContext, bot: Bot):
     user_id = message.from_user.id
     await clean_invite_sub_msgs(user_id, bot, trigger_msg=message)
     await clean_shop_session_msgs(user_id, bot, trigger_msg=message)
+    await clean_profile_session_msgs(user_id, bot, trigger_msg=message)
     await state.clear()
     lang = await get_user_language(user_id)
     is_admin = user_id in get_admin_ids()
@@ -547,7 +574,9 @@ async def cmd_daily_bonus(message: types.Message):
     else:
         text = get_text("daily_bonus_already", lang, coins=coins)
         
-    await message.answer(text, reply_markup=get_ok_keyboard(message.message_id), parse_mode="Markdown")
+    db_msg = await message.answer(text, reply_markup=get_ok_keyboard(message.message_id), parse_mode="Markdown")
+    track_profile_msg(user_id, message.message_id)
+    track_profile_msg(user_id, db_msg.message_id)
 
 @dp.callback_query(F.data.startswith("close_daily_bonus:"))
 async def cb_close_daily_bonus(callback: types.CallbackQuery):
@@ -677,6 +706,8 @@ async def handle_media_download(message: types.Message, bot: Bot, state: FSMCont
     current_state = await state.get_state()
     if current_state == "in_shop":
         track_shop_msg(message.from_user.id, message.message_id)
+    elif current_state == "in_profile":
+        track_profile_msg(message.from_user.id, message.message_id)
 
     platform, icon, url = detect_platform_and_url(message.text)
 
