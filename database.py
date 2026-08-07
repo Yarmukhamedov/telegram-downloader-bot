@@ -278,47 +278,60 @@ async def get_setting(key: str, default: str = None) -> str:
 
 async def get_admin_stats() -> dict:
     today_str = date.today().isoformat()
-    total_users, premium_users, active_today, total_downloads, downloads_today = 0, 0, 0, 0, 0
+    total_users, premium_users, active_today, new_today = 0, 0, 0, 0
+    total_downloads, downloads_today, total_coins, total_referrals = 0, 0, 0, 0
+    used_promos = 0
+    platform_stats = {}
+    quality_stats = {}
+
     try:
         async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT COUNT(*) FROM users") as c:
+                r = await c.fetchone()
+                if r: total_users = r[0]
+
+            async with db.execute("SELECT COUNT(*) FROM users WHERE is_premium = 1") as c:
+                r = await c.fetchone()
+                if r: premium_users = r[0]
+
+            async with db.execute("SELECT COUNT(*) FROM users WHERE last_download_date = ?", (today_str,)) as c:
+                r = await c.fetchone()
+                if r: active_today = r[0]
+
+            async with db.execute("SELECT COUNT(*) FROM users WHERE joined_at LIKE ?", (f"{today_str}%",)) as c:
+                r = await c.fetchone()
+                if r: new_today = r[0]
+
+            async with db.execute("SELECT SUM(coins), SUM(referral_count) FROM users") as c:
+                r = await c.fetchone()
+                if r:
+                    total_coins = r[0] or 0
+                    total_referrals = r[1] or 0
+
+            async with db.execute("SELECT COUNT(*) FROM downloads_history") as c:
+                r = await c.fetchone()
+                if r: total_downloads = r[0]
+
+            async with db.execute("SELECT COUNT(*) FROM downloads_history WHERE created_at LIKE ?", (f"{today_str}%",)) as c:
+                r = await c.fetchone()
+                if r: downloads_today = r[0]
+
+            async with db.execute("SELECT platform, COUNT(*) FROM downloads_history GROUP BY platform ORDER BY COUNT(*) DESC") as c:
+                rows = await c.fetchall()
+                for r in rows:
+                    if r[0]: platform_stats[r[0]] = r[1]
+
+            async with db.execute("SELECT quality, COUNT(*) FROM downloads_history GROUP BY quality ORDER BY COUNT(*) DESC") as c:
+                rows = await c.fetchall()
+                for r in rows:
+                    if r[0]: quality_stats[r[0]] = r[1]
+
             try:
-                async with db.execute("SELECT COUNT(*) FROM users") as c:
-                    row = await c.fetchone()
-                    if row: total_users = row[0]
-            except Exception as e:
-                logger.warning(f"Stats error users: {e}")
-            try:
-                async with db.execute("SELECT COUNT(*) FROM users WHERE is_premium = 1") as c:
-                    row = await c.fetchone()
-                    if row: premium_users = row[0]
-            except Exception as e:
-                logger.warning(f"Stats error premium: {e}")
-            try:
-                async with db.execute("SELECT COUNT(*) FROM users WHERE last_download_date = ?", (today_str,)) as c:
-                    row = await c.fetchone()
-                    if row: active_today = row[0]
-            except Exception as e:
-                logger.warning(f"Stats error active: {e}")
-            try:
-                async with db.execute("SELECT COUNT(*) FROM downloads_history") as c:
-                    row = await c.fetchone()
-                    if row: total_downloads = row[0]
-            except Exception as e:
-                logger.warning(f"Stats error total_downloads: {e}")
-            try:
-                async with db.execute("SELECT COUNT(*) FROM downloads_history WHERE created_at LIKE ?", (f"{today_str}%",)) as c:
-                    row = await c.fetchone()
-                    if row: downloads_today = row[0]
-            except Exception as e:
-                logger.warning(f"Stats error downloads_today: {e}")
-            platform_stats = {}
-            try:
-                async with db.execute("SELECT platform, COUNT(*) FROM downloads_history GROUP BY platform ORDER BY COUNT(*) DESC") as c:
-                    rows = await c.fetchall()
-                    for r in rows:
-                        if r[0]: platform_stats[r[0]] = r[1]
-            except Exception as e:
-                logger.warning(f"Stats error platform_stats: {e}")
+                async with db.execute("SELECT SUM(used_count) FROM redeem_codes") as c:
+                    r = await c.fetchone()
+                    if r: used_promos = r[0] or 0
+            except Exception:
+                pass
 
     except Exception as e:
         logger.error(f"Error connecting for stats: {e}")
@@ -326,12 +339,16 @@ async def get_admin_stats() -> dict:
     return {
         "total_users": total_users,
         "premium_users": premium_users,
+        "free_users": max(0, total_users - premium_users),
+        "new_today": new_today,
         "active_today": active_today,
         "total_downloads": total_downloads,
         "downloads_today": downloads_today,
         "total_coins": total_coins,
         "total_referrals": total_referrals,
-        "platform_stats": platform_stats
+        "used_promos": used_promos,
+        "platform_stats": platform_stats,
+        "quality_stats": quality_stats
     }
 
 async def claim_daily_bonus(user_id: int, bonus_amount: int = 10) -> tuple[bool, str, int]:

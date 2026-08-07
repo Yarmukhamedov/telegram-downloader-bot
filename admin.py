@@ -47,32 +47,63 @@ async def cmd_admin_panel(message: types.Message, state: FSMContext):
         logger.error(f"Error in cmd_admin_panel: {e}")
         await message.answer(f"❌ Admin panelni ochishda xatolik yuz berdi: {e}")
 
+@admin_router.message(Command("stats"))
 @admin_router.message(F.text.in_(get_all_button_texts("btn_admin_stats")))
 async def cmd_admin_stats(message: types.Message):
     admin_ids = get_admin_ids()
     if message.from_user.id not in admin_ids:
         return
 
+    status_msg = await message.answer("📊 *Statistika hisoblanmoqda...*", parse_mode="Markdown")
     stats = await get_admin_stats()
+    
     platform_text = ""
     p_stats = stats.get('platform_stats', {})
     if p_stats:
         platform_text = "\n\n🌐 *Ijtimoiy Tarmoqlar Ulushi:*\n"
+        p_icons = {
+            "Instagram": "📸",
+            "TikTok": "🎵",
+            "YouTube": "🎬",
+            "Pinterest": "📌",
+            "Threads": "💬",
+            "Twitter / X": "🕊",
+            "Facebook": "📘"
+        }
         for p_name, p_cnt in p_stats.items():
-            platform_text += f"• *{p_name}:* {p_cnt} ta yuklash\n"
+            icon = p_icons.get(p_name, "📹")
+            pct = (p_cnt / stats['total_downloads'] * 100) if stats['total_downloads'] > 0 else 0
+            platform_text += f"{icon} *{p_name}:* {p_cnt} ta (`{pct:.1f}%`)\n"
+
+    quality_text = ""
+    q_stats = stats.get('quality_stats', {})
+    if q_stats:
+        quality_text = "\n\n🎬 *Sifatlar Bo'yicha Yuklashlar:*\n"
+        for q_name, q_cnt in q_stats.items():
+            quality_text += f"• *{q_name}:* {q_cnt} ta\n"
 
     text = (
-        "📊 *Kengaytirilgan Bot Statistikasi*\n\n"
-        f"👥 *Jami foydalanuvchilar:* {stats['total_users']} ta\n"
-        f"⭐ *Premium foydalanuvchilar:* {stats['premium_users']} ta\n"
-        f"⚡️ *Bugun faol:* {stats['active_today']} ta\n\n"
-        f"📊 *Jami yuklab olishlar:* {stats['total_downloads']} ta\n"
-        f"📥 *Bugungi yuklashlar:* {stats['downloads_today']} ta\n\n"
-        f"🪙 *Jami Coinlar (bazada):* {stats.get('total_coins', 0)} 🪙\n"
-        f"👥 *Jami takliflar (referallar):* {stats.get('total_referrals', 0)} ta"
+        "📊 *BOTNING BATAFSIL STATISTIKASI*\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"👥 *Jami Foydalanuvchilar:* `{stats['total_users']}` ta\n"
+        f"⭐ *Premium Foydalanuvchilar:* `{stats['premium_users']}` ta\n"
+        f"🆓 *Bepul Foydalanuvchilar:* `{stats['free_users']}` ta\n"
+        f"🆕 *Bugun Qo'shilganlar:* `+{stats['new_today']}` ta\n"
+        f"⚡️ *Bugun Faol A'zolar:* `{stats['active_today']}` ta\n\n"
+        f"📥 *Jami Yuklab Olishlar:* `{stats['total_downloads']}` ta\n"
+        f"🔥 *Bugungi Yuklashlar:* `{stats['downloads_today']}` ta\n\n"
+        f"🪙 *Jami Coinlar (bazada):* `{stats['total_coins']}` 🪙\n"
+        f"🤝 *Jami Takliflar (referallar):* `{stats['total_referrals']}` ta\n"
+        f"🎟 *Ishlatilgan Promokodlar:* `{stats['used_promos']}` ta"
         f"{platform_text}"
+        f"{quality_text}\n"
+        "📌 *Ma'lumotlar real-vaqt rejimida yangilandi.*"
     )
-    await message.answer(text, parse_mode="Markdown")
+    
+    try:
+        await status_msg.edit_text(text, parse_mode="Markdown")
+    except Exception:
+        await message.answer(text, parse_mode="Markdown")
 
 @admin_router.message(Command("export_users"))
 @admin_router.message(F.text.in_(get_all_button_texts("btn_admin_export")))
